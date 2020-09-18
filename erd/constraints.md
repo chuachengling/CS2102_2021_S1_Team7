@@ -18,7 +18,7 @@
 * A **pet owner** owns **pets**.
 
 * A **pet** has a **profile picture**, **birthday**, **name**, **special requests** and a **pet ID**.
-	* A pet can be uniquely identified with its pet ID. (Strong entity)
+	* A pet can be uniquely identified with its pet ID. (Weak entity - existential dependency)
 	
 * A **pet** is an instance of a **pet type**.
 
@@ -27,8 +27,7 @@
 * A **care taker** may choose **what kind of pets they can care for**.
 
 * A **care taker** has past **monthly salaries**, of which the **year**, **month** and **salary details** are stored
-	The salaries can be uniquely identified by the year, month and the care taker's user ID. (Weak entity)
-	_(Can be derived with the main transaction table later, but created for caching purposes)_
+	* The salaries can be uniquely identified by the year, month and the care taker's user ID. (Weak entity - identity dependency) _(Can be derived with the main transaction table later, but created for caching purposes)_
 	
 * A **care taker** can either be a **part-timer** or a **full-timer**
 	* This hierarchy satisfies covering constraints
@@ -43,8 +42,8 @@
 * A **transaction** has a **status**, **transaction price**, **payment option**, **review** and **rating**
 	* The status can either be 'Pending', 'Rejected', 'Accepted' or 'Completed' depending on the state of the transaction
 
-* Each **transaction** can be accompanied by a series of **chat messages** which contains a **sender** (user ID), **time sent** and the **text message itself**
-	* A chat message can be uniquely identified with the sender, time and the transaction id (Weak entity)
+* Each **transaction** can be accompanied by a series of **chat messages** which contains the **time sent** and the **text message** itself
+	* A chat message can be uniquely identified with the sender (a user entity), time and the transaction's key (caretaker ID, pet owner ID, pet ID and time period) (Weak entity - identity dependency)
 	
 ## Numerical diagram-enforceable constraints
 
@@ -83,6 +82,7 @@
 * A care taker cannot look after his/her own pet
 * A review/rating for a transaction can only be filled after the transaction is marked as 'Completed'
 * A pet that is being looked after by the care taker must be classified as one of the pet types that the care taker can care for
+* Any two transactions that involve the same pet and do not have the status 'Rejected' cannot clash in terms of dates.
 * The number of combined 'Accepted' and 'Completed' transactions for any care taker for any particular day cannot exceed 5 for a full-timer or highly rated part-timer, and cannot exceed 2 otherwise.
 * A 'Accepted' or 'Completed' transaction for a care taker must fall within his/her availabilities (if he/she is a part-timer) and must not fall within his/her leave periods (if he/she is a full-timer)
 * A 'Pending' transaction for a care taker that cannot take up the transaction (because of the pet limit or otherwise) must immediately be marked as 'Rejected'
