@@ -1,7 +1,7 @@
 ## Entity and relationship requirements
 
 * The application can have many **accounts**, each storing their own **user ID** and **password**.
-	* An account can be uniquely identified by the UserID
+	* An account can be uniquely identified by the user ID
 
 * An **account** can either be an **admin account** or a **normal user**
 	* This hierarchy satisfies covering constraints
@@ -37,13 +37,13 @@
 
 * A **full-timer** can indicate his/her **leave periods**, comprising of a start and end date (inclusive)
 
-* A **caretaker** may **look after** a **pet** for a particular **period**, this will be termed as a transaction
+* A **care taker** may **look after** a **pet** for a particular **period**, this will be termed as a transaction
 
 * A **transaction** has a **status**, **transaction price**, **payment option**, **review** and **rating**
 	* The status can either be 'Pending', 'Rejected', 'Accepted' or 'Completed' depending on the state of the transaction
 
 * Each **transaction** can be accompanied by a series of **chat messages** which contains the **time sent** and the **text message** itself
-	* A chat message can be uniquely identified with the sender (a user entity), time and the transaction's key (caretaker ID, pet owner ID, pet ID and time period) (Weak entity - identity dependency)
+	* A chat message can be uniquely identified with the sender (a user entity), time and the transaction's key (care taker ID, pet owner ID, pet ID and time period) (Weak entity - identity dependency)
 	
 ## Numerical diagram-enforceable constraints
 
@@ -79,6 +79,7 @@
 
 * A part-timer's availability periods cannot overlap
 * A full-timer's leave periods cannot overlap
+* A full-timer cannot apply for leave if the 2*150 consecutive working days requirement cannot be fulfilled after the application of leave
 * A care taker cannot look after his/her own pet
 * A review/rating for a transaction can only be filled after the transaction is marked as 'Completed'
 * A pet that is being looked after by the care taker must be classified as one of the pet types that the care taker can care for
