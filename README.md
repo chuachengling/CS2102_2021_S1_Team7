@@ -4,3 +4,5 @@ Static FlaskApp is deployed and updated. To run, clone the git and open terminal
 
 Preliminary constraints and ER diagrams can be found in the 'erd' branch of the repo
 
+We're working on the website frontend right now.
+
