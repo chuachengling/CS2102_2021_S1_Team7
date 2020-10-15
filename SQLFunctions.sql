@@ -179,15 +179,30 @@ LANGUAGE plpgsql;
 
 -- Page 6
 CREATE OR REPLACE FUNCTION caretakerReviewRatings (userid VARCHAR)
-RETURNS TABLE (reviews VARCHAR, ratings INTEGER) AS
+RETURNS TABLE (review VARCHAR, rating INTEGER) AS
 $func$
 BEGIN
-	SELECT ct.userid AS name, pet_name, start_date, end_date
+	SELECT review, rating
 	FROM Looking_After
-	WHERE (po.userid = userid OR ct.userid = userid) AND status = 'Completed';
+	WHERE ct.userid = userid AND status = 'Completed';
 END;
 $func$
 LANGUAGE plpgsql;
+
+
+-- Page 8
+CREATE OR REPLACE PROCEDURE confirmBooking (po.userid VARCHAR, pet_name VARCHAR, ct.userid VARCHAR, sd DATE, ed DATE, price FLOAT, payment_op VARCHAR)
+$func$
+BEGIN
+  INSERT INTO Looking_After (po.userid, ct.userid, pet_name, start_date, end_date, trans_pr, payment_op)
+  VALUES (po.userid, ct.userid, pet_name, sd, ed, price, payment_op);
+END;
+$func$
+LANGUAGE plpgsql;
+
+--Make chat function? sending = update table, receiving = select *
+
+
 
 -- Page 9
 CREATE OR REPLACE FUNCTION all_your_transac(userid VARCHAR)
