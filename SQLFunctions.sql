@@ -191,7 +191,7 @@ LANGUAGE plpgsql;
 
 
 -- Page 8
-CREATE OR REPLACE PROCEDURE confirmBooking (po.userid VARCHAR, pet_name VARCHAR, ct.userid VARCHAR, sd DATE, ed DATE, price FLOAT, payment_op VARCHAR)
+CREATE OR REPLACE PROCEDURE confirmBooking (po.userid VARCHAR, pet_name VARCHAR, ct.userid VARCHAR, sd DATE, ed DATE, price FLOAT, payment_op VARCHAR) AS
 $func$
 BEGIN
   INSERT INTO Looking_After (po.userid, ct.userid, pet_name, start_date, end_date, trans_pr, payment_op)
@@ -211,6 +211,32 @@ $func$
 BEGIN
 	SELECT ct.userid, po.userid, pet_name, start_date, end_date, status, rating FROM Looking_After
 	WHERE po.userid = userid OR ct.userid = userid;
+END;
+$func$
+LANGUAGE plpgsql;
+
+
+
+-- Page 10
+CREATE OR REPLACE FUNCTION ct_reviews(userid VARCHAR)
+RETURNS TABLE (ct.userid VARCHAR, po.userid VARCHAR, pet_name VARCHAR, start_date DATE, end_date DATE, status VARCHAR, rating FLOAT, review VARCHAR) AS
+$func$
+BEGIN
+	SELECT ct.userid, po.userid, pet_name, start_date, end_date, status, rating, review FROM Looking_After
+	WHERE ct.userid = userid;
+END;
+$func$
+LANGUAGE plpgsql;
+
+
+
+-- Page 11
+CREATE OR REPLACE PROCEDURE write_review_rating(userid VARCHAR, pet_name VARCHAR, ct.userid VARCHAR, start_date DATE, end_date DATE, rating INTEGER, review VARCHAR) AS
+$func$
+BEGIN
+  UPDATE Looking_After
+  SET rating=rating, review=review
+	WHERE po.userid = userid AND ct.userid = ct.userid AND start_date = start_date AND end_date = end_date;
 END;
 $func$
 LANGUAGE plpgsql;
