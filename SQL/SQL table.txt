@@ -90,7 +90,7 @@ CREATE TABLE Looking_After AS (
 	po.userid 	VARCHAR NOT NULL,
 	ct.userid 	VARCHAR NOT NULL REFERENCES Caretaker(ct.userid) ON UPDATE CASCADE,
 	pet_name 	VARCHAR NOT NULL,
-	dead 		INTEGER DEFAULT 0,
+	dead 		INTEGER NOT NULL,
 	start_date 	DATE NOT NULL,
 	end_date 	DATE NOT NULL,
 	status 	VARCHAR NOT NULL DEFAULT ‘Pending’ CHECK(status = ‘Completed’ OR status = ‘Accepted’ OR status = ‘Pending’ OR status = ‘Rejected’),
