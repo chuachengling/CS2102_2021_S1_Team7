@@ -11,33 +11,32 @@ END;
 $func$
 LANGUAGE plpgsql;
 
--- Page2
-CREATE OR REPLACE PROCEDURE signup(username VARCHAR, password VARCHAR, email VARCHAR) AS
-$func$
+
+
+-- Page 2,3
+CREATE OR REPLACE PROCEDURE signup(userid VARCHAR, name VARCHAR, postal INT, address VARCHAR, hp INT, email VARCHAR, pw VARCHAR) AS
+$func$ --confirm pw/email to be handled by python
+--function run on page 3, data input on pg 2 and 3
 BEGIN
-	INSERT INTO Accounts (userid, pw) VALUES (username, password)
-	INSERT INTO User (userid, email) VALUES (username, email);
+	INSERT INTO Accounts VALUES (userid, pw, FALSE)
+	INSERT INTO User VALUES (userid, name, postal, address, hp, email);
 END;
 $func$
 LANGUAGE plpgsql;
 
 
 
-
--- Page 3
-
-CREATE OR REPLACE PROCEDURE updateProfile(userid VARCHAR, name VARCHAR, address VARCHAR, postalcode INT, hpnumber INT) AS
-$func$ --Userid will be taken from previous page, for use as reference. Used for initial setup of profile, and updating profile
-
+-- Page 4
+CREATE OR REPLACE PROCEDURE updateProfile(userid VARCHAR, address VARCHAR, postalcode INT, hpnumber INT) AS
+$func$
 BEGIN
 	UPDATE User
-	SET name = name, postal = postalcode, address = address, hp = hpnumber
+	SET postal = postalcode, address = address, hp = hpnumber
 	WHERE userid = userid;
 END;
 $func$
 LANGUAGE plpgsql;
 
--- Page 4
 CREATE OR REPLACE PROCEDURE editPW(userid VARCHAR, pw VARCHAR) AS
 $func$
 BEGIN
@@ -47,80 +46,76 @@ BEGIN
 END;
 $func$
 LANGUAGE plpgsql;
-CREATE OR REPLACE PROCEDURE editPetsICanCare(userid VARCHAR, pettype VARCHAR) AS
-$func$ --FIX THIS, DEPENDS ON PARTTIME/FT
 
+CREATE OR REPLACE PROCEDURE editPTPetsICanCare(userid VARCHAR, pettype VARCHAR, price FLOAT) AS
+$func$ --call different function in python depending on pt/ft
 BEGIN
-	UPDATE Accounts
-	SET pw = pw
-	WHERE userid = userid;
+  INSERT INTO PT_validpet VALUES (userid, pettype, price)
 END;
 $func$
 LANGUAGE plpgsql;
-CREATE OR REPLACE PROCEDURE deleteprofile(userid VARCHAR) AS
+
+CREATE OR REPLACE PROCEDURE editFTPetsICanCare(userid VARCHAR, pettype VARCHAR) AS
 $func$
 BEGIN
-	DELETE FROM Accounts
-	WHERE userid = userid;
+  INSERT INTO FT_validpet VALUES (userid, pettype)
 END;
 $func$
 LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE deleteacc(userid VARCHAR) AS
+$func$
+BEGIN
+  UPDATE Accounts
+  SET deactivate = TRUE
+  WHERE userid = userid;
+END;
+$func$
+LANGUAGE plpgsql;
+
 CREATE OR REPLACE PROCEDURE addPOpets(userid VARCHAR, petname VARCHAR, bday VARCHAR, specreq VARCHAR, pettype VARCHAR) AS
 $func$
 BEGIN
-	INSERT INTO Pet (po.userid, pet_name, birthday, special_requests, pet_type) VALUES (userid, petname, bday, specreq, pettype);
+	INSERT INTO Pet (po.userid, pet_name, birthday, spec_req, pet_type) VALUES (userid, petname, bday, specreq, pettype);
 END;
 $func$
 LANGUAGE plpgsql;
-CREATE OR REPLACE PROCEDURE editPOpets(userid VARCHAR, petname VARCHAR, bday VARCHAR, specreq VARCHAR, pettype VARCHAR) AS
-$func$
+
+CREATE OR REPLACE PROCEDURE editPOpets(userid VARCHAR, petname VARCHAR, bday VARCHAR, specreq VARCHAR, pettype VARCHAR, dieded INTEGER) AS
+$func$ --dead = 1 if have change. Need to check if it works, especially if you change name + update dead at same time
+-- deletepet will be done by this too. Or should we split?
 BEGIN
 	UPDATE Pet
-	SET pet_name = petname, birthday = bday, spec_req = specreq, pet_type = pettype
-	WHERE userid = userid, pet_name = petname;
+	SET pet_name = petname, birthday = bday, spec_req = specreq, pet_type = pettype, dead = (SELECT max(dead)+dieded FROM Pet WHERE po.userid = userid AND pet_name = petname)
+	WHERE po.userid = userid, pet_name = petname;
 END;
 $func$
 LANGUAGE plpgsql;
-CREATE OR REPLACE PROCEDURE deletepet(userid VARCHAR, petname VARCHAR) AS
+
+CREATE OR REPLACE PROCEDURE editBank(userid VARCHAR, bankacc INT) AS
 $func$
 BEGIN
-	DELETE FROM Pet
-	WHERE po.userid = userid AND pet_name = petname;
+  REPLACE INTO Caretaker(ct.userid, bank_acc) VALUES (userid, bankacc)
 END;
 $func$
 LANGUAGE plpgsql;
-CREATE OR REPLACE PROCEDURE editFinances(userid VARCHAR, bankacc INT, credcard INT, specreq VARCHAR, pettype VARCHAR) AS
+
+CREATE OR REPLACE PROCEDURE editCredit(userid VARCHAR, credcard INT) AS
 $func$
 BEGIN
-	UPDATE Pet
-	SET pet_name = petname, birthday = bday, spec_req = specreq, pet_type = pettype
-	WHERE userid = userid, pet_name = petname;
+  REPLACE INTO Pet_Owner(po.userid, credit) VALUES (userid, credcard)
 END;
 $func$
 LANGUAGE plpgsql;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
 -- Page 5
 CREATE OR REPLACE FUNCTION ur_current_bookings(userid VARCHAR)
-RETURNS TABLE (ct.userid VARCHAR, avgrating FLOAT, price FLOAT) AS
+RETURNS TABLE (ct.userid VARCHAR, petname VARCHAR, start_date DATE, end_date DATE, status VARCHAR) AS
 $func$
 BEGIN
-	SELECT ct.userid, pet_name, start_date, end_date, status, trans_pr, payment_op FROM Looking_After
+	SELECT ct.userid, pet_name, start_date, end_date, status FROM Looking_After
 	WHERE po.userid = userid OR ct.userid = userid;
 END;
 $func$
@@ -169,10 +164,34 @@ END;
 $func$
 LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION pastTransactions (userid VARCHAR)
+RETURNS TABLE (name VARCHAR, pet_name FLOAT, start_date DATE, end_date DATE) AS
+$func$
+BEGIN
+	SELECT ct.userid AS name, pet_name, start_date, end_date
+	FROM Looking_After
+	WHERE (po.userid = userid OR ct.userid = userid) AND status = 'Completed';
+END;
+$func$
+LANGUAGE plpgsql;
+
+
+
+-- Page 6
+CREATE OR REPLACE FUNCTION caretakerReviewRatings (userid VARCHAR)
+RETURNS TABLE (reviews VARCHAR, ratings INTEGER) AS
+$func$
+BEGIN
+	SELECT ct.userid AS name, pet_name, start_date, end_date
+	FROM Looking_After
+	WHERE (po.userid = userid OR ct.userid = userid) AND status = 'Completed';
+END;
+$func$
+LANGUAGE plpgsql;
 
 -- Page 9
 CREATE OR REPLACE FUNCTION all_your_transac(userid VARCHAR)
-RETURNS TABLE (ct.userid VARCHAR, po.userid VARCHAR, pet_name VARCHAR, start_date DATE, end_date DATE, status VARCHAR, rating FLOAT4) AS
+RETURNS TABLE (ct.userid VARCHAR, po.userid VARCHAR, pet_name VARCHAR, start_date DATE, end_date DATE, status VARCHAR, rating FLOAT) AS
 $func$
 BEGIN
 	SELECT ct.userid, po.userid, pet_name, start_date, end_date, status, rating FROM Looking_After
