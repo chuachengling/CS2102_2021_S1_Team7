@@ -1,0 +1,134 @@
+-- GENERAL ACCOUNTS, USER AND ADMIN --
+
+CREATE TABLE Accounts AS (
+	userid 	VARCHAR PRIMARY KEY,
+	password 	VARCHAR NOT NULL
+	deactivate 	BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE User AS (
+	userid 	VARCHAR PRIMARY KEY (userid) REFERENCES Accounts(userid),
+	name 		VARCHAR NOT NULL,
+	postal 	INTEGER NOT NULL,
+	address 	VARCHAR NOT NULL,
+	hp 		INTEGER NOT NULL,
+	email 	VARCHAR NOT NULL UNIQUE
+);
+
+CREATE TABLE Admin AS (
+	userid 	VARCHAR PRIMARY KEY (userid) REFERENCES Accounts(userid)
+);
+
+
+-- PET OWNER, CARETAKER, PET TYPE --
+
+CREATE TABLE Pet_Owner AS (
+	po.userid 	VARCHAR PRIMARY KEY (userid) REFERENCES User(userid) ON UPDATE CASCADE,
+	credit 	INTEGER DEFAULT NULL
+	
+);
+
+CREATE TABLE Caretaker AS (
+	ct.userid 	VARCHAR PRIMARY KEY (userid) REFERENCES User(userid) ON UPDATE CASCADE,
+	bank_acc 	INTEGER NOT NULL,
+	full_time 	BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE Pet_Type AS (                             -- set by admin
+	pet_type 	VARCHAR NOT NULL,
+	price 	FLOAT4 NOT NULL
+);
+
+
+
+-- VALID PET TYPES FOR CARETAKER, PET--
+CREATE TABLE PT_validpet AS (                              -- set by PT
+	ct.userid 	VARCHAR REFERENCES Caretaker(ct.userid) ON UPDATE CASCADE,
+	pet_type 	VARCHAR NOT NULL REFERENCES Pet_type(pet_type),
+	price 	FLOAT4 NOT NULL,
+	PRIMARY KEY (ct.userid, pet_type)				-- check (pr >= admin set) kiv (use function)
+);
+
+CREATE TABLE FT_validpet AS (                               -- set by FT
+	ct.userid 	VARCHAR REFERENCES Caretaker(ct.userid) ON UPDATE CASCADE,
+pet_type 	VARCHAR NOT NULL REFERENCES Pet_type(pet_type)
+);
+
+CREATE TABLE Pet AS (
+	po.userid 	VARCHAR NOT NULL REFERENCES Pet_Owner(po.userid),
+	pet_name 	VARCHAR NOT NULL,
+	dead 		INTEGER NULL DEFAULT 0,
+	birthday 	DATE DEFAULT NULL,
+	spec_req 	VARCHAR DEFAULT NULL,
+	pet_type 	VARCHAR NOT NULL REFERENCES Pet_Type(pet_type),
+	PRIMARY KEY (po.userid, pet_name, dead)
+);
+
+
+
+-- PART-TIME, AVAILABILITY, FULL-TIME, LEAVE --
+
+CREATE TABLE PT_Availability AS (
+	ct.userid 	VARCHAR NOT NULL REFERENCES Caretaker(ct.userid),
+avail_sd 	DATE NOT NULL,
+avail_ed 	DATE NOT NULL,
+CHECK (date(avail_sd) <= date(avail_ed)),
+PRIMARY KEY (ct.userid, avail_sd, avail_ed)	     -- check constraint (ct.userid.full_time <> true) use function
+);
+
+CREATE TABLE FT_Leave AS (
+	ct.userid 	VARCHAR NOT NULL REFERENCES Caretaker(ct.userid),
+leave_sd 	DATE NOT NULL,
+leave_ed 	DATE NOT NULL,
+CHECK (date(leave_sd) <= date(leave_ed)),
+PRIMARY KEY (ct.userid, leave_sd, leave_ed)	     -- check constraint (ct.userid.full_time = true) use function
+);
+
+-- LOOKING AFTER --
+
+CREATE TABLE Looking_After AS (
+	po.userid 	VARCHAR NOT NULL,
+	ct.userid 	VARCHAR NOT NULL REFERENCES Caretaker(ct.userid) ON UPDATE CASCADE,
+	pet_name 	VARCHAR NOT NULL,
+	dead 		INTEGER DEFAULT 0,
+	start_date 	DATE NOT NULL,
+	end_date 	DATE NOT NULL,
+	status 	VARCHAR NOT NULL DEFAULT ‘Pending’ CHECK(status = ‘Completed’ OR status = ‘Accepted’ OR status = ‘Pending’ OR status = ‘Rejected’),
+	trans_pr 	FLOAT4 NOT NULL CHECK(trans_pr > 0),
+payment_op 	VARCHAR NOT NULL CHECK(payment_op = ‘Credit Card’ OR payment_op = ‘Cash’),
+rating 	INTEGER DEFAULT NULL,
+review 	VARCHAR DEFAULT NULL,
+CHECK (date(start_date) <= date(end_date)),
+PRIMARY KEY (po.userid, ct.userid, pet_name, start_date, end_date)
+FOREIGN KEY (po.userid, pet_name, dead) REFERENCES Pet(po.user, pet_name, dead) ON UPDATE CASCADE
+);
+
+
+-- CHAT --
+
+CREATE TABLE Chat AS (
+	po.userid 	VARCHAR,
+	ct.userid 	VARCHAR,
+	pet_name 	VARCHAR,
+	start_date 	DATE NOT NULL,
+	end_date 	DATE NOT NULL,
+	time 		TIMESTAMPTZ,
+	sender 	INTEGER CHECK (sender = 1 OR sender = 2 OR sender = 3),
+	text 		VARCHAR,
+	FOREIGN KEY (po.userid, ct.userid, pet_name, start_date, end_date) REFERENCES Looking_After(po.userid, ct.userid, pet_name, start_date, end_date),
+	PRIMARY KEY (po.userid, ct.userid, pet_name, start_date, end_date, time, sender)
+);
+
+-- SALARY (KIV) --
+
+CREATE TABLE Salary AS (
+	ct.userid 	VARCHAR NOT NULL,
+	full_time 	BOOLEAN NOT NULL,
+	year 		INTEGER CHECK (year <= 2020),
+	month 	INTEGER CHECK (month <= 12 AND month >= 1),
+	details 	VARCHAR,
+	amount 	INTEGER,
+	PRIMARY KEY (ct.userid, year, month),
+	FOREIGN KEY (ct.userid, full_time) REFERENCES Caretaker(ct.userid, full_time)
+);
+
