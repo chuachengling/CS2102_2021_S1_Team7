@@ -54,7 +54,7 @@ File: Layout CSS
 --------------------------------------------------------------------------------------------------------------- */
 #pageintro{padding:180px 0;}
 
-#pageintro article{display:block; max-width:75%;}
+#pageintro article{display:block; max-width:100%;}
 #pageintro .heading{margin-bottom:20px; font-size:4rem;}
 #pageintro p:first-of-type{margin:0 0 20px 0; text-transform:uppercase; font-size:1.6rem; letter-spacing:5px;}
 #pageintro footer{margin-top:50px;}
