@@ -1,4 +1,5 @@
 from flask import Flask
+import os
 
 from __init__ import db, login_manager
 from views import view
