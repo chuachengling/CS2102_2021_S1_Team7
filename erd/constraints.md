@@ -1,13 +1,14 @@
 ## Entity and relationship requirements
 
-* The application can have many **accounts**, each storing their own **user ID** and **password**.
+* The application can have many **accounts**, each storing their own **user ID**, **password** and **deactivation status**.
 	* An account can be uniquely identified by the user ID
+	* The deactivation status is 0 is the account is active, 1 if the account is deactivated
 
 * An **account** can either be an **admin account** or a **normal user**
 	* This hierarchy satisfies covering constraints
 	* This hierarchy does not satisfy overlapping constraints
 		
-* A **normal user** has a **profile picture**, **name**, **location**, **H/P number**, and **email**.
+* A **normal user** has a **name**, **location (postal)**, **address**, **H/P number** and **email**.
 
 * A **normal user** can either be a **care taker** or a **pet owner**
 	* This hierarchy satisfies covering constraints
@@ -17,17 +18,20 @@
 
 * A **pet owner** owns **pets**.
 
-* A **pet** has a **profile picture**, **birthday**, **name**, **special requests** and a **pet ID**.
-	* A pet can be uniquely identified with its pet ID. (Weak entity - existential dependency)
+* A **pet** has a **birthday**, **name**, **special requests** and a **dead flag**.
+	* A pet can be uniquely identified with its pet name and dead flag knowing the pet owner. (Weak entity - identity dependency) This means an owner cannot have two (live) pets with the same name.
+	* The dead flag is 0 if the pet is still in the care of the pet owner. If the pet owner deletes the pet, the dead flag will be set to a number other than 0.
 	
 * A **pet** is an instance of a **pet type**.
 
 * A **pet type** contains details about the **particular pet type** and also its **daily base price** (set by the administrator)
 
 * A **care taker** may choose **what kind of pets they can care for**.
+	* A part-timer may have their own price set for the particular pet type.
 
 * A **care taker** has past **monthly salaries**, of which the **year**, **month** and **salary details** are stored
 	* The salaries can be uniquely identified by the year, month and the care taker's user ID. (Weak entity - identity dependency) _(Can be derived with the main transaction table later, but created for caching purposes)_
+	* _We are leaving this table out for now and it may never be implemented_
 	
 * A **care taker** can either be a **part-timer** or a **full-timer**
 	* This hierarchy satisfies covering constraints
@@ -43,7 +47,7 @@
 	* The status can either be 'Pending', 'Rejected', 'Accepted' or 'Completed' depending on the state of the transaction
 
 * Each **transaction** can be accompanied by a series of **chat messages** which contains the **time sent** and the **text message** itself
-	* A chat message can be uniquely identified with the sender (a user entity), time and the transaction's key (care taker ID, pet owner ID, pet ID and time period) (Weak entity - identity dependency)
+	* A chat message can be uniquely identified with the sender (an integer indicating if it's the pet owner, care taker or system), time and the transaction's key (care taker ID, pet owner ID, pet ID and time period) (Weak entity - identity dependency)
 	
 ## Numerical diagram-enforceable constraints
 
@@ -89,6 +93,6 @@
 * A 'Pending' transaction for a care taker that cannot take up the transaction (because of the pet limit or otherwise) must immediately be marked as 'Rejected'
 
 ## Other assumptions
-* There is only one admin account
+* There is only one admin account _(To be relooked at later)_
 * The admin will create a new account if he/she wishes to use the PCS
 * The pet types that the care taker can care for is fixed and will not change
