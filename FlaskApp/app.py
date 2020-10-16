@@ -29,7 +29,7 @@ db.init_app(app)
 login_manager.init_app(app)
 
 with app.app_context():
-	initFile = open('sql/init.sql', 'r')
+	initFile = open('FlaskApp/sql/init.sql', 'r')
 	db.session.execute(''.join(line.strip() for line in initFile.readlines()))
 	db.session.commit()
 	initFile.close()
