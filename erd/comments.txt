@@ -1,0 +1,55 @@
+Hi Group 7,
+
+The comment for your group is given below:
+Comments
+
+--> try to minimize crossing of lines (if possible)
+= Okay, we tried
+
+- A normal user has a profile picture, name, location, H/P number, and email.
+--> non-critical, but profile picture may take time to implement
+    and is email a candidate key?
+    if so, do be careful with the implementation
+= Removed profile pic for user
+= We'll stick to ID for logins, emails have to be unique.
+
+A pet has a profile picture, birthday, name, special requests and a pet ID.
+    A pet can be uniquely identified with its pet ID. (Weak entity - existential dependency)
+==> Why not ID dependency and no need for pet ID
+    an owner cannot have two pets with the same name?
+= An owner might have two pets with the same name,
+= But make it simpler, name is now identifier, remove petID
+
+The salaries can be uniquely identified by the year, month and the care taker's user ID. (Weak entity - identity dependency) (Can be derived with the main transaction table later, but created for caching purposes)
+--> since it seems to be computed, make sure to take care of consistency
+= Noted with thanks
+
+** this comment is for period (related to both)
+A part-timer can indicate his/her availabilities for a period, comprising of a start and end date (inclusive)
+A full-timer can indicate his/her leave periods, comprising of a start and end date (inclusive)
+==> The definition of "period" seems to be conflicting
+    is it availability period or unavailability (leave) period?
+    this is then associated to the "looking after"
+    
+    So, is it intended to be a multi-purpose entity set?
+    or is it intended to have a meaning that it connect the "availability"/"leave" (i.e., to be able to find information about care taker availability)?
+    
+    If it is the former, then ignore this comment.
+    If it is the latter, then need to adjust the meaning accordingly.
+= Multi-purpose entity
+
+Pet owner - Pets
+--> is this the owning entity set?
+    if so, might be better to use "EX Owns" to indicate existential dependency since there is two ==> arrows out of "pet"
+= Renaming 'Owns' to 'EX Owns'
+
+There is only one admin account
+--> why?
+= For simplicity, we can always relax this afterwards
+
+[5 marks]
+
+Cheers,
+Adi
+
+QOTD: "Just because you assume we're normal you can't assume your customers are normal" - Tristan, 2020
