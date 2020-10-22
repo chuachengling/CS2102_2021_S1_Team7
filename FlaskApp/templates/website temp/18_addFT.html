@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<!--
+Template Name: Bistup
+Author: <a href="https://www.os-templates.com/">OS Templates</a>
+Author URI: https://www.os-templates.com/
+Copyright: OS-Templates.com
+Licence: Free to use under our free template licence terms
+Licence URI: https://www.os-templates.com/template-terms
+-->
+<html lang="">
+<!-- To declare your language - read more here: https://www.w3.org/International/questions/qa-html-language-declarations -->
+<head>
+<title>Pet Stealer</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link href="layout/styles/layout.css" rel="stylesheet" type="text/css" media="all">
+</head>
+<body id="top">
+<!-- ################################################################################################ -->
+<!-- ################################################################################################ -->
+<!-- ################################################################################################ -->
+<div class="wrapper row0">
+  <div id="topbar" class="hoc clear"> 
+    <!-- ################################################################################################ -->
+    <div class="fl_right">
+      <ul class="nospace">
+        <li><i class="fas fa-phone rgtspace-5"></i> +65 XXXX XXXX</li>
+        <li><i class="fas fa-envelope rgtspace-5"></i> XXXX@domain.com</li>
+      </ul>
+    </div>
+    <!-- ################################################################################################ -->
+  </div>
+</div>
+<!-- ################################################################################################ -->
+<!-- ################################################################################################ -->
+<!-- ################################################################################################ -->
+<div class="wrapper row1">
+  <header id="header" class="hoc clear"> 
+    <!-- ################################################################################################ -->
+    <div id="logo" class="one_quarter first">
+      <h1><a href="12_FT_home.html">Care Taker</a></h1> <!-- depends if CO and CT overlap -->
+    </div>
+    
+    <div id="logo" class="one_quarter">
+      <h1><a href="5_PO_home.html">Pet Owner</a></h1>
+    </div>
+      
+    <div id="logo" class="one_quarter">
+      <h1><a href="4_settings_profile.html">Profile</a></h1>
+    </div>
+    
+    <div id="logo" class="one_quarter">
+      <h1><a href="9_all_transactions.html">All Transactions</a></h1>
+    </div>
+    <!-- ################################################################################################ -->
+  </header>
+</div>
+<!-- ################################################################################################ -->
+<!-- ################################################################################################ -->
+<!-- ################################################################################################ -->
+<div class="wrapper bgded overlay" style="background-image:url('images/demo/backgrounds/bgg.png');">
+  <div id="pageintro" class="hoc clear"> 
+    <!-- ################################################################################################ -->
+    <article>
+      <div class="fl_left">
+<<<<<<< Updated upstream
+          <h2 class="heading">Hello!</h2>
+=======
+          <h2 class="heading">Add a new Full-Timer</h2>
+>>>>>>> Stashed changes
+        </div>
+      <div class="fl_right"> 
+          <a href="#" class="btn">Add New Full-timer</a>
+      </div>
+      <br>
+      <br>
+      <br>
+      <br>
+<<<<<<< Updated upstream
+      <br>
+      <h2 class="heading">Admin Search for</h2>
+      <div class="one_quarter first">
+        <p>Caretaker</p>
+        <textarea rows="1" cols="25" style="color: grey">Username (CT)</textarea>
+      </div>
+      <div class="one_quarter">
+        <p>Pet Owner</p>
+        <textarea rows="1" cols="25" style="color: grey">Username (PO)</textarea>
+      </div>
+      
+      <div class="one_quarter">
+        <p>Month</p>
+          <select name="Months" style="color: grey" >
+              <option value="jan" style="color:grey">January</option> 
+              <option value="feb" style="color:grey">February</option>
+              <option value="mar" style="color:grey">March</option> 
+              <option value="apr" style="color:grey">April</option>
+              <option value="may" style="color:grey">May</option>
+              <option value="jun" style="color:grey">June</option>
+              <option value="jul" style="color:grey">July</option>
+              <option value="aug" style="color:grey">August</option>
+              <option value="sep" style="color:grey">September</option>
+              <option value="oct" style="color:grey">October</option>
+              <option value="nov" style="color:grey">November</option>
+              <option value="dec" style="color:grey">December</option>
+          </select>
+      </div>
+      <div class="one_quarter">
+        <p>Year</p>
+        <textarea rows="1" cols="10" style="color: grey">Year</textarea>
+      </div>
+
+      <br>
+      <br>
+      <div class="fl_right"> 
+          <footer><a href="#" class="btn">SEARCH</a></footer>
+      </div>
+    </article>
+
+    </article>
+      <div class="main">
+
+        <section class="signup-form">
+            <!--<img src="static/images/registration.png" style="background-image: url('static/images/registration.jpg');">-->
+            <div class="container">
+                <div class="signup-content">
+                    <form method="POST" id="signup-form" class="signup-form">
+                        <h2 class="form-title">Create account</h2>
+                        {{ form.csrf_token() }}
+
+                        {% for field in form if field.name != "csrf_token" %}
+                        <p>{{ field.label() }}</p>
+                        <p>{{ field (class_ = "form-input") }}
+                            {% for error in field.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </p>
+                        {% endfor %}
+                        
+
+                        <!-- <div class="form-group">
+                            <input type="text" class="form-input" name="name" id="name" placeholder="Your Name"/>
+                        </div>
+                        <div class="form-group">
+                            <input type="email" class="form-input" name="email" id="email" placeholder="Your Email"/>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" class="form-input" name="password" id="password" placeholder="Password"/>
+                            <span toggle="#password" class="zmdi zmdi-eye field-icon toggle-password"></span>
+                        </div>
+                        <div class="form-group">
+                            <input type="password" class="form-input" name="re_password" id="re_password" placeholder="Repeat your password"/>
+                        </div>
+                        <div class="form-group">
+                            <input type="checkbox" name="agree-term" id="agree-term" class="agree-term" />
+                            <label for="agree-term" class="label-agree-term"><span><span></span></span>I agree all statements in  <a href="#" class="term-service">Terms of service</a></label>
+                        </div>
+                        <div class="form-group">
+                            <input type="submit" name="submit" id="submit" class="form-submit" value="Sign up"/>
+                        </div>
+                    </form>
+                    <p class="loginhere">
+                        Have already an account ? <a href="#" class="loginhere-link">Login here</a>
+                    </p> -->
+                    <p class="loginhere">
+                            Have already an account ? <a href="/login" class="loginhere-link">Login here</a>
+                        </p>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- JS -->
+    <script src="static/vendor/jquery/jquery.min.js"></script>
+    <script src="static/js/registration.js"></script>
+      
+
+</div>
+</div>
+</body>
+</html>
