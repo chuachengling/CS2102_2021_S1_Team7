@@ -61,6 +61,83 @@ Licence URI: https://www.os-templates.com/template-terms
 <div class="wrapper bgded overlay" style="background-image:url('images/demo/backgrounds/bgg.png');">
   <div id="pageintro" class="hoc clear"> 
     <!-- ################################################################################################ -->
+    <article>
+      <div class="fl_left">
+        <h2 class="heading">Profile of USER</h2>
+      </div>
+      <div class="fl_right">
+        <a class="btn" href="#">DEACTIVATE ACCOUNT</a>
+      </div>
+    </article>
+    <br>
+    <article>
+      <button type="button" class="collapsible">Personal</button>
+        <div class="content" style="color:black">
+          <br>
+          <p>Personal Profile</p>
+          <p>Update Handphone Number: 
+            <span><textarea rows="1" cols="20" style="color: grey">Enter new number here</textarea></span>
+          </p>
+          <p>Update Address: 
+            <span><textarea rows="1" cols="20" style="color: grey">Enter new address here</textarea></span>
+          </p>
+          <p>Change Password: 
+            <span><textarea rows="1" cols="20" style="color: grey">Enter new password here</textarea></span>
+          </p>
+          <form action="/action_page.php">
+            <label for="cars">Pets I can care for:</label>
+            <select name="cars" id="cars" multiple>
+              <option value="Cat">Cat</option>
+              <option value="Dog">Dog</option>
+              <option value="Rabbit">Rabbit</option>
+              <option value="Snake">Snake</option>
+            </select>
+          </form>
+          <div class="fl_right">
+            <footer><a class="btn" href="#">Update</a></footer>  
+            <br> 
+          </div>
+        </div>
+    </article>
+    <br><br><br><br>
+    <article>
+      <button type="button" class="collapsible">Pet</button>
+        <div class="content" style="color:black">
+          <br>
+          <p>Pet Profile</p>
+          <p>This is a test</p>
+          <p>This is a test</p>
+          <p>This is a test</p>
+          <p>This is a test</p>
+        </div>
+    </article>
+    <br><br><br><br>  
+    <article>
+      <button type="button" class="collapsible">Finances</button>
+        <div class="content" style="color:black">
+          <br>
+          <p>This is a test</p>
+          <p>This is a test</p>
+          <p>This is a test</p>
+          <p>This is a test</p>
+          <p>This is a test</p>
+        </div> 
+    </article>    
+    <script>
+    var coll = document.getElementsByClassName("collapsible");
+    var j;
+    for (j = 0; j < coll.length; j++) {
+      coll[j].addEventListener("click", function() {
+        this.classList.toggle("active");
+        var content = this.nextElementSibling;
+        if (content.style.display === "block") {
+          content.style.display = "none";
+        } else {
+          content.style.display = "block";
+        }
+      });
+    }
+    </script> <!-- Don't need open -->     
 </div>
 </div>
 </body>
