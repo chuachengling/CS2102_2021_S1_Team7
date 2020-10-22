@@ -121,36 +121,41 @@ END;
 $func$
 LANGUAGE plpgsql;
 
+
+
+--TODO: bookings: check FT up to 5 pets, PT up to 2 UNLESS rating good, then up to 5. How to code?
+-- Discuss how we want to implement this. If 5 pets at ANY POINT, do ifelse to check if inserted sd/ed is between?
 CREATE OR REPLACE FUNCTION bidsearchuserid (petname VARCHAR, sd DATE, ed DATE)
 RETURNS TABLE (userid VARCHAR) AS
 $func$
 BEGIN
-	SELECT ct_userid FROM PT_validpet pt WHERE pt.pet_type IN(
+	SELECT ct_userid FROM PT_validpet pt WHERE pt.pet_type IN( --PTCT who can care for this pettype
 		SELECT pet_type FROM Pet p WHERE p.pet_name = petname)
+	INTERSECTION
+	(
+	SELECT ct_userid FROM PT_Availability --Available PTCT
+	WHERE sd >= avail_sd AND ed <= avail_ed
+	)
+	
 	UNION
-	SELECT ct_userid FROM FT_validpet ft WHERE ft.pet_type IN(
-		SELECT pet_type FROM Pet p WHERE p.pet_name = petname)
-	EXCEPT
 	
 	(
-	SELECT ct_userid FROM FT_Leave --Remove FT who are unavailable
+	SELECT ct_userid FROM FT_validpet ft WHERE ft.pet_type IN( --FTCT who can care for this pettype
+		SELECT pet_type FROM Pet p WHERE p.pet_name = petname)
+	EXCEPT
+	(SELECT ct_userid FROM FT_Leave --Remove FT who are unavailable. Check that this part works, not sure if logic correct
 	WHERE NOT (
 		(sd < leave_sd AND ed < leave_sd)
 		OR (sd > leave_ed AND sd > leave_ed)
-		        )
+	  ))
 	)
-	INTERSECTION
-	(
-	SELECT ct_userid FROM PT_Availability
-	WHERE sd >= avail_sd AND ed <= avail_ed
-	);
+;
 END;
 $func$
 LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION bidDetails (userid VARCHAR) --Bidsearchuserid and bidDetails are used for page
 --6 output. so pg 6 will be sth like bidDetails(bidsearchuserid(petname, sd, ed))
---Todo: fix code when referring to Caretaker_PetPrices. Table was split
 RETURNS TABLE (name VARCHAR, avgrating FLOAT, price FLOAT) AS
 $func$
 BEGIN
@@ -195,7 +200,7 @@ LANGUAGE plpgsql;
 
 
 -- Page 8
-CREATE OR REPLACE PROCEDURE confirmBooking (pouid VARCHAR, petname VARCHAR, ctuid VARCHAR, sd DATE, ed DATE, price FLOAT, payment_op VARCHAR) AS
+CREATE OR REPLACE PROCEDURE applyBooking (pouid VARCHAR, petname VARCHAR, ctuid VARCHAR, sd DATE, ed DATE, price FLOAT, payment_op VARCHAR) AS
 $func$
 BEGIN
   INSERT INTO Looking_After (po_userid, ct_userid, pet_name, start_date, end_date, trans_pr, payment_op)
@@ -203,9 +208,6 @@ BEGIN
 END;
 $func$
 LANGUAGE plpgsql;
-
---Make chat function? sending = update table, receiving = select *
-
 
 
 -- Page 9
@@ -262,7 +264,7 @@ LANGUAGE plpgsql;
 
 -- Page 13
 CREATE OR REPLACE PROCEDURE ft_applyleave(userid VARCHAR, sd DATE, ed DATE) AS
-$func$ --add a check for if FT has taken too much leave, etc
+$func$ --TODO: add a check for if FT has taken too much leave, etc
 BEGIN
   INSERT INTO FT_Leave VALUES (userid, sd, ed);
 END;
@@ -282,14 +284,14 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE ft_cancelleave(userid VARCHAR, sd DATE, ed DATE) AS
 $func$
 BEGIN
-  
-  INSERT INTO FT_Leave VALUES (userid, sd, ed);
+  DELETE FROM FT_Leave ft
+  WHERE ft.ct_userid = userid AND ft.avail_sd = sd AND ft.avail_ed = ed ;
 END;
 $func$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE pt_applyleave(userid VARCHAR, sd DATE, ed DATE) AS
-$func$ --add a check for if pT has taken too much leave, etc
+CREATE OR REPLACE PROCEDURE pt_applyavail(userid VARCHAR, sd DATE, ed DATE) AS
+$func$ --TODO: Add check that availability is only for current year and next year
 BEGIN
   INSERT INTO PT_Availability VALUES (userid, sd, ed);
 END;
@@ -340,18 +342,133 @@ LANGUAGE plpgsql;
 
 
 
--- Page 15 -- TODO: ADD MORE STUFF HERE, THIS ISNT DONE
-CREATE OR REPLACE FUNCTION FT_salary_bd(userid VARCHAR, year INT, month INT)
-RETURNS TABLE (pet_name VARCHAR, sd DATE, ed DATE, trans_pr FLOAT) AS
--- Total price for the month to be calculate in python
+-- Page 15
+CREATE OR REPLACE FUNCTION total_trans_pr_mnth(userid VARCHAR, year INT, month INT)
+RETURNS FLOAT
 $func$
 BEGIN
-  SELECT year, month, sum(amount) as salary
-  FROM Salary
-	WHERE ct_userid = userid
-	GROUP BY year ASC, month ASC;
+  DECLARE @firstday DATE := cast(cast(year AS VARCHAR) + '-' + cast(month AS VARCHAR) + '-01' AS date)
+  DECLARE @lastday DATE := cast(cast(year AS VARCHAR) + '-' + cast((month+1) AS VARCHAR) + '-01' AS date)
+
+  RETURN (
+  (SELECT sum(trans_pr)
+  FROM Looking_After la
+  WHERE userid = la.ct_userid
+  AND (start_date >= firstday AND end_date <= lastday
+  AND status = 'Completed') --Transaction occurs completely in this month
+  +
+  (SELECT sum(trans_pr * (end_date - firstday)/(end_date - start_date)) -- Multiplies trans_pr by no. of days that transaction was in this month
+  FROM Looking_After la
+  WHERE userid = la.ct_userid
+  AND (start_date < firstday AND end_date <= lastday AND end_date >= firstday)
+  AND status = 'Completed') --Transaction starts before this month, but ends during
+  +
+  (SELECT sum(trans_pr * (lastday - start_date)/(end_date - start_date)) -- Multiplies trans_pr by no. of days that transaction was in this month
+  FROM Looking_After la
+  WHERE userid = la.ct_userid
+  AND (start_date <= lastday AND start_date >= firstday AND end_date > lastday)
+  AND status = 'Completed') --Transaction starts during this month, but ends after
+  +
+  (SELECT sum(trans_pr * (lastday - firstday)/(end_date - start_date))
+  FROM Looking_After la
+  WHERE userid = la.ct_userid
+  AND (start_date < firstday AND end_date > lastday
+  AND status = 'Completed') --Transaction covers whole month, but starts before and ends after
+  ); --TODO: maybe delete if we confirm max transactions 2 weeks
 END;
 $func$
 LANGUAGE plpgsql;
 
--- TODO: Add new function to calculate petdays
+CREATE OR REPLACE FUNCTION total_pet_day_mnth(userid VARCHAR, year INT, month INT)
+RETURNS INT
+$func$
+BEGIN
+  DECLARE @firstday DATE := cast(cast(year AS VARCHAR) + '-' + cast(month AS VARCHAR) + '-01' AS date)
+  DECLARE @lastday DATE := cast(cast(year AS VARCHAR) + '-' + cast((month+1) AS VARCHAR) + '-01' AS date)
+
+  RETURN (
+  (SELECT sum(EXTRACT(DAY FROM end_date - start_date))
+  FROM Looking_After la
+  WHERE userid = la.ct_userid
+  AND (start_date >= firstday AND end_date <= lastday
+  AND status = 'Completed') --Transaction occurs completely in this month
+  +
+  (SELECT sum(EXTRACT(DAY FROM end_date - firstday))
+  FROM Looking_After la
+  WHERE userid = la.ct_userid
+  AND (start_date < firstday AND end_date <= lastday AND end_date >= firstday)
+  AND status = 'Completed') --Transaction starts before this month, but ends during
+  +
+  (SELECT sum(EXTRACT(DAY FROM lastday - start_date))
+  FROM Looking_After la
+  WHERE userid = la.ct_userid
+  AND (start_date <= lastday AND start_date >= firstday AND end_date > lastday)
+  AND status = 'Completed') --Transaction starts during this month, but ends after
+  +
+  (SELECT sum(lastday - firstday)
+  FROM Looking_After la
+  WHERE userid = la.ct_userid
+  AND (start_date < firstday AND end_date > lastday
+  AND status = 'Completed') --Transaction covers whole month, but starts before and ends after
+  ); --TODO: maybe delete if we confirm max transactions 2 weeks
+END;
+$func$
+LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION trans_this_month(userid VARCHAR, year INT, month INT)
+RETURNS TABLE (po_userid VARCHAR, pet_name VARCHAR, start_date DATE, end_date DATE, rate FLOAT, trans_pr FLOAT) AS
+$func$
+BEGIN
+  DECLARE @firstday DATE := cast(cast(year AS VARCHAR) + '-' + cast(month AS VARCHAR) + '-01' AS date)
+  DECLARE @lastday DATE := cast(cast(year AS VARCHAR) + '-' + cast((month+1) AS VARCHAR) + '-01' AS date)
+
+  SELECT po_userid, pet_name, start_date, end_date, trans_pr/(end_date-start_date) AS rate, trans_pr
+  FROM Looking_After
+  WHERE ct_userid = userid
+  AND NOT (start_date < firstday AND end_date < firstday)
+  AND NOT (start_date > lastday AND end_date > lastday)
+  AND status = 'Completed';
+END;
+$func$
+LANGUAGE plpgsql;
+
+
+
+-- Page 16
+CREATE OR REPLACE FUNCTION petprofile(userid VARCHAR, petname VARCHAR)
+RETURNS TABLE (pet_type VARCHAR, birthday DATE, spec_req VARCHAR) AS
+$func$
+BEGIN
+  SELECT pet_type, birthday, spec_req FROM Pet
+  WHERE po_userid = userid AND petname = petname AND dead = 0;
+END;
+$func$
+LANGUAGE plpgsql;
+
+
+-- MISC
+CREATE OR REPLACE PROCEDURE admin_modify_base(pet_type VARCHAR, price FLOAT) AS
+$func$
+BEGIN
+  UPDATE Pet_Type
+  SET Pet_Type.price = price
+  WHERE Pet_Type.pet_type = pet_type;
+END;
+$func$
+LANGUAGE plpgsql;
+
+-- TRIGGERS
+CREATE OR REPLACE FUNCTION check_pt_prices() --Raises PT prices, if admin increases base price
+RETURNS TRIGGER AS
+$$ BEGIN
+  UPDATE pt
+  SET pt.price = base.price
+  FROM PT_validpet pt LEFT JOIN Pet_Type base ON pt.pet_type = base.pet_type
+  WHERE pt.price < base.price
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE TRIGGER admin_change_price AFTER UPDATE ON Pet_Type
+FOR EACH ROW EXECUTE PROCEDURE check_pt_prices;
