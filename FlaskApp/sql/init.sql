@@ -72,7 +72,7 @@ pet_type 	VARCHAR NOT NULL REFERENCES Pet_type (pet_type)
 CREATE TABLE Pet (
 	po_userid 	VARCHAR NOT NULL REFERENCES Pet_Owner (po_userid),
 	pet_name 	VARCHAR NOT NULL,
-	dead 		INTEGER NULL DEFAULT 0,
+	dead 		INTEGER DEFAULT 0,
 	birthday 	DATE DEFAULT NULL,
 	spec_req 	VARCHAR DEFAULT NULL,
 	pet_type 	VARCHAR NOT NULL REFERENCES Pet_Type (pet_type),
