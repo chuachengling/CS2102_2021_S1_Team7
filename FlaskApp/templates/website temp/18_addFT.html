@@ -63,7 +63,11 @@ Licence URI: https://www.os-templates.com/template-terms
     <!-- ################################################################################################ -->
     <article>
       <div class="fl_left">
+<<<<<<< Updated upstream
           <h2 class="heading">Hello!</h2>
+=======
+          <h2 class="heading">Add a new Full-Timer</h2>
+>>>>>>> Stashed changes
         </div>
       <div class="fl_right"> 
           <a href="#" class="btn">Add New Full-timer</a>
@@ -72,6 +76,7 @@ Licence URI: https://www.os-templates.com/template-terms
       <br>
       <br>
       <br>
+<<<<<<< Updated upstream
       <br>
       <h2 class="heading">Admin Search for</h2>
       <div class="one_quarter first">
@@ -111,6 +116,66 @@ Licence URI: https://www.os-templates.com/template-terms
           <footer><a href="#" class="btn">SEARCH</a></footer>
       </div>
     </article>
+
+    </article>
+      <div class="main">
+
+        <section class="signup-form">
+            <!--<img src="static/images/registration.png" style="background-image: url('static/images/registration.jpg');">-->
+            <div class="container">
+                <div class="signup-content">
+                    <form method="POST" id="signup-form" class="signup-form">
+                        <h2 class="form-title">Create account</h2>
+                        {{ form.csrf_token() }}
+
+                        {% for field in form if field.name != "csrf_token" %}
+                        <p>{{ field.label() }}</p>
+                        <p>{{ field (class_ = "form-input") }}
+                            {% for error in field.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </p>
+                        {% endfor %}
+                        
+
+                        <!-- <div class="form-group">
+                            <input type="text" class="form-input" name="name" id="name" placeholder="Your Name"/>
+                        </div>
+                        <div class="form-group">
+                            <input type="email" class="form-input" name="email" id="email" placeholder="Your Email"/>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" class="form-input" name="password" id="password" placeholder="Password"/>
+                            <span toggle="#password" class="zmdi zmdi-eye field-icon toggle-password"></span>
+                        </div>
+                        <div class="form-group">
+                            <input type="password" class="form-input" name="re_password" id="re_password" placeholder="Repeat your password"/>
+                        </div>
+                        <div class="form-group">
+                            <input type="checkbox" name="agree-term" id="agree-term" class="agree-term" />
+                            <label for="agree-term" class="label-agree-term"><span><span></span></span>I agree all statements in  <a href="#" class="term-service">Terms of service</a></label>
+                        </div>
+                        <div class="form-group">
+                            <input type="submit" name="submit" id="submit" class="form-submit" value="Sign up"/>
+                        </div>
+                    </form>
+                    <p class="loginhere">
+                        Have already an account ? <a href="#" class="loginhere-link">Login here</a>
+                    </p> -->
+                    <p class="loginhere">
+                            Have already an account ? <a href="/login" class="loginhere-link">Login here</a>
+                        </p>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- JS -->
+    <script src="static/vendor/jquery/jquery.min.js"></script>
+    <script src="static/js/registration.js"></script>
+      
+
 </div>
 </div>
 </body>
