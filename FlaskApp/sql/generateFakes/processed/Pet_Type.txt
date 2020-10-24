@@ -1,0 +1,9 @@
+INSERT INTO Pet_Type (pet_type, price) VALUES
+('Dog', 57.43),
+('Cat', 54.77),
+('Rabbit', 65.12),
+('Guinea pig', 68.38),
+('Hamster', 54.78),
+('Gerbil', 64.2),
+('Mouse', 53.89),
+('Chinchilla', 63.57);

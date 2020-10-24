@@ -39,13 +39,12 @@ CREATE TABLE Admin (
 
 CREATE TABLE Pet_Owner (
 	po_userid 	VARCHAR PRIMARY KEY REFERENCES Users (userid) ON UPDATE CASCADE,
-	credit 	INTEGER DEFAULT NULL
-	
+	credit 	CHAR(16) DEFAULT NULL
 );
 
 CREATE TABLE Caretaker (
 	ct_userid 	VARCHAR PRIMARY KEY REFERENCES Users (userid) ON UPDATE CASCADE,
-	bank_acc 	INTEGER NOT NULL,
+	bank_acc 	CHAR(10) NOT NULL,
 	full_time 	BOOLEAN DEFAULT FALSE
 );
 
