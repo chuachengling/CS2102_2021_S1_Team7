@@ -62,109 +62,45 @@ Licence URI: https://www.os-templates.com/template-terms
   <div id="pageintro" class="hoc clear"> 
     <!-- ################################################################################################ -->
     <article>
-      <div class="fl_left">
-<<<<<<< Updated upstream
-          <h2 class="heading">Hello!</h2>
-=======
-          <h2 class="heading">Add a new Full-Timer</h2>
->>>>>>> Stashed changes
-        </div>
-      <div class="fl_right"> 
-          <a href="#" class="btn">Add New Full-timer</a>
-      </div>
+      <h2 class="heading">Adding a New Full time Employee</h2>
       <br>
       <br>
-      <br>
-      <br>
-<<<<<<< Updated upstream
-      <br>
-      <h2 class="heading">Admin Search for</h2>
-      <div class="one_quarter first">
-        <p>Caretaker</p>
-        <textarea rows="1" cols="25" style="color: grey">Username (CT)</textarea>
-      </div>
-      <div class="one_quarter">
-        <p>Pet Owner</p>
-        <textarea rows="1" cols="25" style="color: grey">Username (PO)</textarea>
-      </div>
-      
-      <div class="one_quarter">
-        <p>Month</p>
-          <select name="Months" style="color: grey" >
-              <option value="jan" style="color:grey">January</option> 
-              <option value="feb" style="color:grey">February</option>
-              <option value="mar" style="color:grey">March</option> 
-              <option value="apr" style="color:grey">April</option>
-              <option value="may" style="color:grey">May</option>
-              <option value="jun" style="color:grey">June</option>
-              <option value="jul" style="color:grey">July</option>
-              <option value="aug" style="color:grey">August</option>
-              <option value="sep" style="color:grey">September</option>
-              <option value="oct" style="color:grey">October</option>
-              <option value="nov" style="color:grey">November</option>
-              <option value="dec" style="color:grey">December</option>
-          </select>
-      </div>
-      <div class="one_quarter">
-        <p>Year</p>
-        <textarea rows="1" cols="10" style="color: grey">Year</textarea>
-      </div>
-
-      <br>
-      <br>
-      <div class="fl_right"> 
-          <footer><a href="#" class="btn">SEARCH</a></footer>
-      </div>
     </article>
-
-    </article>
-      <div class="main">
+          <div class="main">
 
         <section class="signup-form">
-            <!--<img src="static/images/registration.png" style="background-image: url('static/images/registration.jpg');">-->
+            <!--<img src="static/images/Dogs.jpg" style="background-image: url('static/images/Dogs.jpg');">-->
             <div class="container">
                 <div class="signup-content">
                     <form method="POST" id="signup-form" class="signup-form">
                         <h2 class="form-title">Create account</h2>
-                        {{ form.csrf_token() }}
-
-                        {% for field in form if field.name != "csrf_token" %}
-                        <p>{{ field.label() }}</p>
-                        <p>{{ field (class_ = "form-input") }}
-                            {% for error in field.errors %}
-                                {{ error }}
-                                {% endfor %}
-                            </p>
-                        {% endfor %}
-                        
-
-                        <!-- <div class="form-group">
-                            <input type="text" class="form-input" name="name" id="name" placeholder="Your Name"/>
-                        </div>
                         <div class="form-group">
-                            <input type="email" class="form-input" name="email" id="email" placeholder="Your Email"/>
+                            <input type="text" class="form-input" name="name" id="name" placeholder="Full-Time Employee Name" style="color: black" />
                         </div>
+                        <br>
                         <div class="form-group">
-                            <input type="text" class="form-input" name="password" id="password" placeholder="Password"/>
+                            <input type="email" class="form-input" name="email" id="email" placeholder="Full-Time Employee Email" style="color: black"/>
+                        </div>
+                        <br>
+                        <div class="form-group">
+                            <input type="text" class="form-input" name="password" id="password" placeholder="Password" style="color: black"/>
                             <span toggle="#password" class="zmdi zmdi-eye field-icon toggle-password"></span>
                         </div>
+                        <br>
                         <div class="form-group">
-                            <input type="password" class="form-input" name="re_password" id="re_password" placeholder="Repeat your password"/>
+                            <input type="password" class="form-input" name="re_password" id="re_password" placeholder="Repeat password" style="color: black"/>
                         </div>
+                        <br>
                         <div class="form-group">
                             <input type="checkbox" name="agree-term" id="agree-term" class="agree-term" />
-                            <label for="agree-term" class="label-agree-term"><span><span></span></span>I agree all statements in  <a href="#" class="term-service">Terms of service</a></label>
+                            <label for="agree-term" class="label-agree-term"><span><span></span></span>Full-Time Employee agrees to all statements in  <a href="#" class="term-service">Terms of service</a></label>
                         </div>
+                        <br>
                         <div class="form-group">
                             <input type="submit" name="submit" id="submit" class="form-submit" value="Sign up"/>
                         </div>
                     </form>
-                    <p class="loginhere">
-                        Have already an account ? <a href="#" class="loginhere-link">Login here</a>
-                    </p> -->
-                    <p class="loginhere">
-                            Have already an account ? <a href="/login" class="loginhere-link">Login here</a>
-                        </p>
+                    
                 </div>
             </div>
         </section>
@@ -174,8 +110,7 @@ Licence URI: https://www.os-templates.com/template-terms
     <!-- JS -->
     <script src="static/vendor/jquery/jquery.min.js"></script>
     <script src="static/js/registration.js"></script>
-      
-
+    
 </div>
 </div>
 </body>
