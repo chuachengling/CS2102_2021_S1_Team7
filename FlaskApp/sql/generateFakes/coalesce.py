@@ -1,9 +1,10 @@
 from math import floor
 from random import randint, random, shuffle, seed
 from datetime import date, timedelta
-from numpy.random import normal
+from numpy.random import normal, seed as npseed, choice, geometric
 
 seed(2102)
+npseed(2102)
 
 _SHOW_VERBOSE = True
 _SHOW_OUTPUT_SUMMARY = True
@@ -46,6 +47,14 @@ _PT_MAX_RUN = 5
 _FT_START_PROB = 0.05
 _FT_END_PROB = 0.25
 _FT_MAX_RUN = 7
+
+_PET_DISTRI = [0.35, 0.35, 0.1, 0.04, 0.04, 0.01, 0.01, 0.1]
+_HAVE_PET_PROB = 0.35
+_HAS_PAST_PET_PROB = 0.01
+_ADDITIONAL_PET_PROB = 0.2
+_PET_BDAY_START_DATE = date(2010, 1, 1)
+_PET_BDAY_END_DATE = date(2020, 6, 1)
+_PET_ADJ_PROB = 0.25
 
 # Open files
 firstUserIn = open('raw/usernames.csv', 'r')
@@ -164,7 +173,7 @@ with open('processed/Caretaker.txt', 'w') as caretakerOut:
     caretakerOut.write(';\n')
     verbosePrint('\'processed/Caretaker.txt\' written!')
 
-writeLog('> {} pet types\n'.format(len(_PET_LIST)))
+writeLog('> {} pet types'.format(len(_PET_LIST)))
 
 # Write pet type data
 with open('processed/Pet_Type.txt', 'w') as petTypeOut:
@@ -200,6 +209,45 @@ with open('processed/FT_validpet.txt', 'w') as ftPetOkayOut:
     ftPetOkayOut.write(',\n'.join('(\'{}\', \'{}\')'.format(userid, petname) for petname in fullTimePetOkay for userid in fullTimePetOkay[petname]))
     ftPetOkayOut.write(';\n')
     verbosePrint('\'processed/FT_validpet.txt\' written!')
+
+petAdjPool = []
+# Read pet adjective pool
+with open('raw/petAdjectives.txt', 'r') as adjIn:
+    for line in adjIn:
+        if not line.strip():
+            break
+        petAdjPool.append(line.strip())
+
+petNamePool = list(set((i[0][:-1] + 'ty') for i in personalData if len(i[0]) > 1))
+totalAlivePets = 0
+totalPets = 0
+pets = {}
+for petOwner in petOwners:
+    pets[petOwner] = []
+    numOfPets = geometric(1 - _HAVE_PET_PROB) + 1
+    totalAlivePets += numOfPets
+    petNames = choice(petNamePool, numOfPets, replace = False)
+    for petNo in range(numOfPets):
+        petsToGen = 1
+        if random() < _HAS_PAST_PET_PROB:
+            petsToGen += geometric(1 - _ADDITIONAL_PET_PROB)
+        totalPets += petsToGen
+        for deadNo in range(petsToGen):
+            birthday = _PET_BDAY_START_DATE + timedelta(days = randint(0, (_PET_BDAY_END_DATE - _PET_BDAY_START_DATE).days))
+            specReq = ', '.join(choice(petAdjPool, geometric(1 - _PET_ADJ_PROB), replace = False))
+            petType = choice(_PET_LIST, p = _PET_DISTRI)
+            pets[petOwner].append((petNames[petNo], deadNo, str(birthday), specReq, petType))
+
+# Write full-timer's pet handling data
+with open('processed/Pet.txt', 'w') as petOut:
+    petOut.write('INSERT INTO Pet (po_userid, pet_name, dead, birthday, spec_req, pet_type) VALUES\n')
+    petOut.write(',\n'.join('(\'{}\', \'{}\', {}, \'{}\', \'{}\', \'{}\')'.format(petowner, *vals) for petowner in pets for vals in pets[petowner]))
+    petOut.write(';\n')
+    verbosePrint('\'processed/Pet.txt\' written!')
+
+writeLog('> {} total pets (Average pets owned: {:.2f})'.format(totalPets, totalPets/len(petOwners)))
+writeLog('\t> {} active pets'.format(totalAlivePets))
+writeLog('\t> {} inactive pets\n'.format(totalPets - totalAlivePets))
 
 partTimeTotalDays = 0
 partTimeAvail = {}
