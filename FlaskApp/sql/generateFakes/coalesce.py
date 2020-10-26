@@ -1,5 +1,7 @@
 from math import floor
 from random import randint, random, shuffle, seed
+from datetime import date, timedelta
+
 seed(2102)
 
 _SHOW_VERBOSE = True
@@ -29,6 +31,15 @@ _PO_CT_OVERLAP = 0.01
 _FULL_TIME = 0.6
 
 _PET_LIST = ['Dog', 'Cat', 'Rabbit', 'Guinea pig', 'Hamster', 'Gerbil', 'Mouse', 'Chinchilla']
+
+_START_DATE = date(2020, 9, 1)
+_END_DATE = date(2020, 11, 1)
+_PT_START_PROB = 0.20
+_PT_END_PROB = 0.4
+_PT_MAX_RUN = 5
+_FT_START_PROB = 0.05
+_FT_END_PROB = 0.25
+_FT_MAX_RUN = 7
 
 # Open files
 firstUserIn = open('raw/usernames.csv', 'r')
@@ -129,7 +140,7 @@ writeLog('> {} pet owners'.format(numPetOwners + numOverlap))
 writeLog('> {} care takers'.format(numCareTakers + numOverlap))
 writeLog('\t> {} full timers'.format(numFulltime))
 writeLog('\t> {} part timers'.format(numCareTakers + numOverlap - numFulltime))
-writeLog('> {} overlapped roles'.format(numOverlap))
+writeLog('> {} overlapped roles\n'.format(numOverlap))
 
 # Write pet owner data
 with open('processed/Pet_Owner.txt', 'w') as petOwnerOut:
@@ -147,7 +158,7 @@ with open('processed/Caretaker.txt', 'w') as caretakerOut:
     caretakerOut.write(';\n')
     verbosePrint('\'processed/Caretaker.txt\' written!')
 
-writeLog('> {} pet types'.format(len(_PET_LIST)))
+writeLog('> {} pet types\n'.format(len(_PET_LIST)))
 
 # Write pet type data
 with open('processed/Pet_Type.txt', 'w') as petTypeOut:
@@ -155,6 +166,63 @@ with open('processed/Pet_Type.txt', 'w') as petTypeOut:
     petTypeOut.write(',\n'.join('(\'{}\', {})'.format(pet, round(50 + random()*20, 2)) for pet in _PET_LIST))
     petTypeOut.write(';\n')
     verbosePrint('\'processed/Pet_Type.txt\' written!')
+
+partTimeTotalDays = 0
+partTimeAvail = {}
+for partTimer in partTimers:
+    partTimeAvail[partTimer] = []
+    isWorking = False
+    startDay = None
+    totalDays = (_END_DATE - _START_DATE).days
+    for dayDelta in range(totalDays):
+        currentDay = _START_DATE + timedelta(days = dayDelta)
+        if not isWorking:
+            if random() < _PT_START_PROB:
+                isWorking = True
+                startDay = currentDay
+        if isWorking:
+            if (currentDay - startDay).days == _PT_MAX_RUN or random() < _PT_END_PROB or dayDelta == totalDays-1:
+                partTimeAvail[partTimer].append((str(startDay), str(currentDay)))
+                partTimeTotalDays += (currentDay - startDay).days + 1
+                isWorking = False
+
+writeLog('> Average part-timer coverage: {:.2f}%'.format(100*partTimeTotalDays/(len(partTimers)*(totalDays+1))))
+
+# Write part time availability data
+with open('processed/PT_Availability.txt', 'w') as ptAvailOut:
+    ptAvailOut.write('INSERT INTO PT_Availability (ct_userid, avail_sd, avail_ed) VALUES\n')
+    ptAvailOut.write(',\n'.join('(\'{}\', \'{}\', \'{}\')'.format(ptUser, *date) for ptUser in partTimeAvail for date in partTimeAvail[ptUser]))
+    ptAvailOut.write(';\n')
+    verbosePrint('\'processed/PT_Availability.txt\' written!')
+
+fullTimeTotalDays = 0
+fullTimeLeave = {}
+for fullTimer in fullTimers:
+    fullTimeLeave[fullTimer] = []
+    isLeave = False
+    startDay = None
+    totalDays = (_END_DATE - _START_DATE).days
+    for dayDelta in range(totalDays):
+        currentDay = _START_DATE + timedelta(days = dayDelta)
+        if not isLeave:
+            if random() < _FT_START_PROB:
+                isLeave = True
+                startDay = currentDay
+        if isLeave:
+            if (currentDay - startDay).days == _FT_MAX_RUN or random() < _FT_END_PROB or dayDelta == totalDays-1:
+                fullTimeLeave[fullTimer].append((startDay, currentDay))
+                fullTimeTotalDays += (currentDay - startDay).days + 1
+                isLeave = False
+
+writeLog('> Average full-timer coverage: {:.2f}%\n'.format(100 - 100*fullTimeTotalDays/(len(fullTimers)*(totalDays+1))))
+
+# Write full time availability data
+with open('processed/FT_Leave.txt', 'w') as ftLeaveOut:
+    ftLeaveOut.write('INSERT INTO FT_Leave (ct_userid, leave_sd, leave_ed) VALUES\n')
+    ftLeaveOut.write(',\n'.join('(\'{}\', \'{}\', \'{}\')'.format(ftUser, *date) for ftUser in fullTimeLeave for date in fullTimeLeave[ftUser]))
+    ftLeaveOut.write(';\n')
+    verbosePrint('\'processed/FT_Leave.txt\' written!')
+
 
 # Output log
 if _SHOW_OUTPUT_SUMMARY:
