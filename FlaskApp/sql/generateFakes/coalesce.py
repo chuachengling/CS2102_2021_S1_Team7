@@ -1,6 +1,7 @@
 from math import floor
 from random import randint, random, shuffle, seed
 from datetime import date, timedelta
+from numpy.random import normal
 
 seed(2102)
 
@@ -31,6 +32,11 @@ _PO_CT_OVERLAP = 0.01
 _FULL_TIME = 0.6
 
 _PET_LIST = ['Dog', 'Cat', 'Rabbit', 'Guinea pig', 'Hamster', 'Gerbil', 'Mouse', 'Chinchilla']
+_PET_OKAY_PROB = [0.85, 0.85, 0.6, 0.35, 0.3, 0.2, 0.01, 0.2]
+_PET_MEAN_PRICE = [80, 80, 75, 60, 50, 50, 40, 70]
+_PT_MEAN_OFFSET = 15
+_PT_VARIANCE = 20
+
 
 _START_DATE = date(2020, 9, 1)
 _END_DATE = date(2020, 11, 1)
@@ -166,6 +172,34 @@ with open('processed/Pet_Type.txt', 'w') as petTypeOut:
     petTypeOut.write(',\n'.join('(\'{}\', {})'.format(pet, round(50 + random()*20, 2)) for pet in _PET_LIST))
     petTypeOut.write(';\n')
     verbosePrint('\'processed/Pet_Type.txt\' written!')
+
+partTimePetOkay = {}
+for petName, petProb, petMean in zip(_PET_LIST, _PET_OKAY_PROB, _PET_MEAN_PRICE):
+    partTimePetOkay[petName] = {}
+    for partTimer in partTimers:
+        if random() < petProb:
+            partTimePetOkay[petName][partTimer] = max(normal(petMean + _PT_MEAN_OFFSET, _PT_VARIANCE), petMean)
+
+# Write part-timer's pet handling data
+with open('processed/PT_validpet.txt', 'w') as ptPetOkayOut:
+    ptPetOkayOut.write('INSERT INTO PT_validpet (ct_userid, pet_type, price) VALUES\n')
+    ptPetOkayOut.write(',\n'.join('(\'{}\', \'{}\', {})'.format(userid, petname, price) for petname in partTimePetOkay for userid, price in partTimePetOkay[petname].items()))
+    ptPetOkayOut.write(';\n')
+    verbosePrint('\'processed/PT_validpet.txt\' written!')
+
+fullTimePetOkay = {}
+for petName, petProb in zip(_PET_LIST, _PET_OKAY_PROB):
+    fullTimePetOkay[petName] = []
+    for fullTimer in fullTimers:
+        if random() < petProb:
+            fullTimePetOkay[petName].append(fullTimer)
+
+# Write full-timer's pet handling data
+with open('processed/FT_validpet.txt', 'w') as ftPetOkayOut:
+    ftPetOkayOut.write('INSERT INTO FT_validpet (ct_userid, pet_type) VALUES\n')
+    ftPetOkayOut.write(',\n'.join('(\'{}\', \'{}\')'.format(userid, petname) for petname in fullTimePetOkay for userid in fullTimePetOkay[petname]))
+    ftPetOkayOut.write(';\n')
+    verbosePrint('\'processed/FT_validpet.txt\' written!')
 
 partTimeTotalDays = 0
 partTimeAvail = {}
