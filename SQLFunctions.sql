@@ -1,5 +1,5 @@
 -- Page 1
-CREATE OR REPLACE FUNCTION login(username VARCHAR, password VARCHAR)
+CREATE OR REPLACE FUNCTION login(username VARCHAR, pw VARCHAR)
 RETURNS BOOLEAN AS
 $func$
 BEGIN
@@ -15,7 +15,7 @@ LANGUAGE plpgsql;
 
 -- Page 2,3
 CREATE OR REPLACE PROCEDURE signup(userid VARCHAR, name VARCHAR, postal INT, address VARCHAR, hp INT, email VARCHAR, pw VARCHAR) AS
-$func$ --confirm pw/email to be handled by python
+$func$ 
 --function run on page 3, data input on pg 2 and 3
 BEGIN
 	INSERT INTO Accounts VALUES (userid, pw, FALSE)
@@ -83,6 +83,7 @@ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE editPOpets(userid VARCHAR, petname VARCHAR, bday VARCHAR, specreq VARCHAR, pettype VARCHAR, dieded INTEGER) AS
 $func$ --dead = 1 if have change. Need to check if it works, especially if you change name + update dead at same time
+--dieded value should be 0 or 1. Too lazy to change this to boolean sry
 -- deletepet will be done by this too. Or should we split?
 BEGIN
 	UPDATE Pet
@@ -113,7 +114,7 @@ LANGUAGE plpgsql;
 -- Page 5
 CREATE OR REPLACE FUNCTION po_upcoming_bookings(userid VARCHAR)
 RETURNS TABLE (petname VARCHAR, start_date DATE, end_date DATE, status VARCHAR) AS
-$func$--Do we want to filter for the immediate upcoming 2 weeks, or just ALL upcoming
+$func$
 BEGIN
   RETURN(
 	SELECT pet_name, start_date, end_date, status FROM Looking_After
@@ -125,18 +126,21 @@ LANGUAGE plpgsql;
 
 
 --TODO: bookings: check FT up to 5 pets, PT up to 2 UNLESS rating good, then up to 5. How to code?
--- Discuss how we want to implement this. If 5 pets at ANY POINT, do ifelse to check if inserted sd/ed is between?
+-- for loop? NO. use generate_series
+--https://dataschool.com/learn-sql/generate-series/
 CREATE OR REPLACE FUNCTION bidsearchuserid (petname VARCHAR, sd DATE, ed DATE)
 RETURNS TABLE (userid VARCHAR) AS
 $func$
 BEGIN
   RETURN(
+  (
 	SELECT ct_userid FROM PT_validpet pt WHERE pt.pet_type IN( --PTCT who can care for this pettype
 		SELECT pet_type FROM Pet p WHERE p.pet_name = petname)
 	INTERSECTION
 	(
 	SELECT ct_userid FROM PT_Availability --Available PTCT
 	WHERE sd >= avail_sd AND ed <= avail_ed
+	)
 	)
 	
 	UNION
@@ -150,7 +154,14 @@ BEGIN
 		(sd < leave_sd AND ed < leave_sd)
 		OR (sd > leave_ed AND sd > leave_ed)
 	  ))
-	)
+	  
+	EXCEPT --TODOURGENT: Remove FT caretakers who have >5 pets at any day
+	--https://www.mssqltips.com/sqlservertip/6488/how-to-expand-a-range-of-dates-into-rows-using-a-sql-server-numbers-table/
+	--maybe make this another function???????????????/
+	(
+	SELECT *
+	FROM Looking_After
+	))
 	)
 ;
 END;
