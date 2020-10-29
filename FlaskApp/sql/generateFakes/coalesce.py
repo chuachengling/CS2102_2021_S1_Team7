@@ -1,7 +1,7 @@
 from math import floor
 from random import randint, random, shuffle, seed
-from datetime import date, timedelta
-from numpy.random import normal, seed as npseed, choice, geometric
+from datetime import date, datetime, timedelta
+from numpy.random import normal, seed as npseed, choice, geometric, binomial
 
 seed(2102)
 npseed(2102)
@@ -27,10 +27,10 @@ def printLog():
 _NORMAL_USERS = 0.995
 _ACTIVATED_USERS = 0.98
 
-_PET_OWNERS = 0.80
+_PET_OWNERS = 0.75
 _PO_CT_OVERLAP = 0.01
 
-_FULL_TIME = 0.6
+_FULL_TIME = 0.2
 
 _PET_LIST = ['Dog', 'Cat', 'Rabbit', 'Guinea pig', 'Hamster', 'Gerbil', 'Mouse', 'Chinchilla']
 _PET_OKAY_PROB = [0.85, 0.85, 0.6, 0.35, 0.3, 0.2, 0.01, 0.2]
@@ -41,10 +41,11 @@ _PT_VARIANCE = 20
 
 _START_DATE = date(2020, 9, 1)
 _END_DATE = date(2020, 11, 1)
+_TOTAL_MONTHS = 2
 _PT_START_PROB = 0.20
 _PT_END_PROB = 0.4
 _PT_MAX_RUN = 5
-_FT_START_PROB = 0.05
+_FT_START_PROB = 0.01
 _FT_END_PROB = 0.25
 _FT_MAX_RUN = 7
 
@@ -55,6 +56,21 @@ _ADDITIONAL_PET_PROB = 0.2
 _PET_BDAY_START_DATE = date(2010, 1, 1)
 _PET_BDAY_END_DATE = date(2020, 6, 1)
 _PET_ADJ_PROB = 0.25
+
+_TODAY_DATE = date(2020, 9, 28)
+_PT_BOOK_PROB = 0.9
+_FT_BOOK_PROB = 0.5
+_FT_LOAD_FACTOR = 15
+_REVIEW_PROB = 0.7
+
+_ACCEPTED_PROB = 0.5
+_PAYMENT_PROB = 0.5
+_FT_REVIEW_BOUNDS = (3, 5)
+_PT_REVIEW_BOUNDS = (2, 4)
+
+_CHAT_N = 4
+_CHAT_P = 0.25
+_CHAT_BACKTRACK_DAYS = 4
 
 # Open files
 firstUserIn = open('raw/usernames.csv', 'r')
@@ -264,7 +280,7 @@ for partTimer in partTimers:
                 startDay = currentDay
         if isWorking:
             if (currentDay - startDay).days == _PT_MAX_RUN or random() < _PT_END_PROB or dayDelta == totalDays-1:
-                partTimeAvail[partTimer].append((str(startDay), str(currentDay)))
+                partTimeAvail[partTimer].append((startDay, currentDay))
                 partTimeTotalDays += (currentDay - startDay).days + 1
                 isWorking = False
 
@@ -305,6 +321,216 @@ with open('processed/FT_Leave.txt', 'w') as ftLeaveOut:
     ftLeaveOut.write(';\n')
     verbosePrint('\'processed/FT_Leave.txt\' written!')
 
+allPets = {i: [] for i in _PET_LIST}
+for petOwner in pets:
+    for pet in pets[petOwner]:
+        allPets[pet[4]].append((petOwner, pet[0], pet[1]))
+
+fullTimeAvail = {}
+for fullTimer in fullTimeLeave:
+    curBusy = [(None, _START_DATE - timedelta(days = 1))] + fullTimeLeave[fullTimer] + [(_END_DATE + timedelta(days = 1), None)]
+    fullTimeAvail[fullTimer] = []
+    for i in range(len(curBusy) - 1):
+        if (curBusy[i+1][0] - curBusy[i][1]).days > 1:
+            fullTimeAvail[fullTimer].append((curBusy[i][1] + timedelta(days = 1), curBusy[i+1][0] - timedelta(days = 1)))
+
+petAvailability = set()
+rejectedSet = []
+
+fullTimeAvailability = {}
+fullTimeBusyDays = 0
+fullTimeJobs = []
+for fullTimer in fullTimeAvail:
+    okayPets = [i for i in fullTimePetOkay if fullTimer in fullTimePetOkay[i]]
+    if not okayPets:
+        continue
+    for availabilityRange in fullTimeAvail[fullTimer]:
+        bookings = binomial(_FT_LOAD_FACTOR, _FT_BOOK_PROB)
+        dateRange = ((availabilityRange[0] - _START_DATE).days, (availabilityRange[1] - _START_DATE).days)
+        for _ in range(bookings):
+            choiceFlag = True
+            rollPet = choice(okayPets)
+            rollExact = allPets[rollPet][randint(0, len(allPets[rollPet])-1)]
+            rollStart = randint(*dateRange)
+            rollEnd = randint(*dateRange)
+            if rollStart > rollEnd:
+                rollStart, rollEnd = rollEnd, rollStart
+            for i in range(rollStart, rollEnd+1):
+                if (i, rollExact) in petAvailability or ((i, fullTimer) in fullTimeAvailability and fullTimeAvailability[(i, fullTimer)] == 5) or rollExact[0] == fullTimer:
+                    if rollExact[0] != fullTimer:
+                        rejectedSet.append((rollPet, *rollExact, fullTimer, _START_DATE + timedelta(days = rollStart), _START_DATE + timedelta(days = rollEnd)))
+                    choiceFlag = False
+            if not choiceFlag:
+                continue
+            for i in range(rollStart, rollEnd+1):
+                petAvailability.add((i, rollExact))
+                fullTimeAvailability[(i, fullTimer)] = fullTimeAvailability.get((i, fullTimer), 0) + 1
+            fullTimeBusyDays += rollEnd - rollStart + 1
+            fullTimeJobs.append((rollPet, *rollExact, fullTimer, _START_DATE + timedelta(days = rollStart), _START_DATE + timedelta(days = rollEnd)))
+
+partTimeAvailability = {}
+partTimeBusyDays = 0
+partTimeJobs = []
+for partTimer in partTimeAvail:
+    okayPets = [i for i in partTimePetOkay if partTimer in partTimePetOkay[i]]
+    if not okayPets:
+        continue
+    for availabilityRange in partTimeAvail[partTimer]:
+        bookings = min(geometric(_PT_BOOK_PROB) + 1, 5)
+        dateRange = ((availabilityRange[0] - _START_DATE).days, (availabilityRange[1] - _START_DATE).days)
+        for _ in range(bookings):
+            choiceFlag = True
+            while choiceFlag:
+                choiceFlag = False
+                rollPet = choice(okayPets)
+                rollExact = allPets[rollPet][randint(0, len(allPets[rollPet])-1)]
+                rollStart = randint(*dateRange)
+                rollEnd = randint(*dateRange)
+                if rollStart > rollEnd:
+                    rollStart, rollEnd = rollEnd, rollStart
+                for i in range(rollStart, rollEnd+1):
+                    if (i, rollExact) in petAvailability or ((i, partTimer) in partTimeAvailability and partTimeAvailability[(i, partTimer)] == 5) or rollExact[0] == partTimer:
+                        if rollExact[0] != partTimer:
+                            rejectedSet.append((rollPet, *rollExact, partTimer, _START_DATE + timedelta(days = rollStart), _START_DATE + timedelta(days = rollEnd)))
+                        choiceFlag = True
+            for i in range(rollStart, rollEnd+1):
+                petAvailability.add((i, rollExact))
+                partTimeAvailability[(i, partTimer)] = partTimeAvailability.get((i, partTimer), 0) + 1
+            partTimeBusyDays += rollEnd - rollStart + 1
+            partTimeJobs.append((rollPet, *rollExact, partTimer, _START_DATE + timedelta(days = rollStart), _END_DATE + timedelta(days = rollEnd)))
+
+sampleMessages = []
+with open('raw/sampleMessages.txt', 'r') as sampleIn:
+    for line in sampleIn:
+        if not line.strip() or '\'' in line:
+            continue
+        sampleMessages.append(line.strip())
+def generateMessages():
+    return choice(sampleMessages, size = binomial(_CHAT_N, _CHAT_P), replace = False)
+isFirstChat = False
+totalChatMessages = 0
+
+pastKeys = set()
+with open('processed/Looking_After.txt', 'w') as lookingOut, open('processed/Chat.txt', 'w') as chatOut:
+    lookingOut.write('INSERT INTO Looking_After (po_userid, pet_name, dead, ct_userid, start_date, end_date, status, trans_pr, payment_op, rating, review) VALUES\n')
+    chatOut.write('INSERT INTO Chat (po_userid, pet_name, dead, ct_userid, start_date, end_date, time, sender, text) VALUES\n')
+    for i, job in enumerate(partTimeJobs):
+        pet_type, _, _, _, _, start_date, end_date = job
+        if start_date < _TODAY_DATE:
+            if end_date < _TODAY_DATE:
+                status = 'Completed'
+            else:
+                status = 'Accepted'
+        else:
+            if random() < _ACCEPTED_PROB:
+                status = 'Accepted'
+            else:
+                status = 'Pending'
+        trans_pr = max(normal(_PET_MEAN_PRICE[_PET_LIST.index(pet_type)], _PT_VARIANCE), min(_PET_MEAN_PRICE))
+        payment_op = 'Credit Card' if random() < _PAYMENT_PROB else 'Cash'
+        if status == 'Completed' and random() < _REVIEW_PROB:
+            rating = '\'' + str(randint(*_PT_REVIEW_BOUNDS)) + '\''
+            review = '\'' + choice(sampleMessages) + '\''
+        else:
+            rating = 'NULL'
+            review = 'NULL'
+
+        if job in pastKeys:
+            continue
+        pastKeys.add(job)
+        if i != 0:
+            lookingOut.write(',\n')
+        lookingOut.write('({}, \'{}\', {}, \'{}\', {}, {})'.format(', '.join('\'{}\''.format(i) for i in job[1:]), status, trans_pr, payment_op, rating, review))
+        messages = generateMessages()
+        totalChatMessages += len(messages)
+        for message in messages:
+            standard = min(_TODAY_DATE, start_date)
+            standard = datetime(standard.year, standard.month, standard.day)
+            standard -= timedelta(days = randint(0, _CHAT_BACKTRACK_DAYS), hours = randint(0, 23), minutes = randint(0, 59), seconds = randint(0, 59))
+            if not isFirstChat:
+                isFirstChat = True
+            else:
+                chatOut.write(',\n');
+            chatOut.write('({}, \'{}\', {}, \'{}\')'.format(', '.join('\'{}\''.format(i) for i in job[1:]), standard.strftime('%Y-%m-%d %H:%M:%S'), randint(1, 2), message));
+        
+    for i, job in enumerate(fullTimeJobs):
+        pet_type, _, _, _, _, start_date, end_date = job
+        if start_date < _TODAY_DATE:
+            if end_date < _TODAY_DATE:
+                status = 'Completed'
+            else:
+                status = 'Accepted'
+        else:
+            status = 'Accepted'
+        trans_pr = max(normal(_PET_MEAN_PRICE[_PET_LIST.index(pet_type)], _PT_VARIANCE), min(_PET_MEAN_PRICE))
+        payment_op = 'Credit Card' if random() < _PAYMENT_PROB else 'Cash'
+        if status == 'Completed' and random() < _REVIEW_PROB:
+            rating = '\'' + str(randint(*_FT_REVIEW_BOUNDS)) + '\''
+            review = '\'' + choice(sampleMessages) + '\''
+        else:
+            rating = 'NULL'
+            review = 'NULL'
+
+        if job in pastKeys:
+            continue
+        pastKeys.add(job)
+        if i != 0 or len(partTimeJobs) > 0:
+            lookingOut.write(',\n')
+        lookingOut.write('({}, \'{}\', {}, \'{}\', {}, {})'.format(', '.join('\'{}\''.format(i) for i in job[1:]), status, trans_pr, payment_op, rating, review))
+        messages = generateMessages()
+        totalChatMessages += len(messages)
+        for message in messages:
+            standard = min(_TODAY_DATE, start_date)
+            standard = datetime(standard.year, standard.month, standard.day)
+            standard -= timedelta(days = randint(0, _CHAT_BACKTRACK_DAYS), hours = randint(0, 23), minutes = randint(0, 59), seconds = randint(0, 59))
+            if not isFirstChat:
+                isFirstChat = True
+            else:
+                chatOut.write(',\n');
+            chatOut.write('({}, \'{}\', {}, \'{}\')'.format(', '.join('\'{}\''.format(i) for i in job[1:]), standard.strftime('%Y-%m-%d %H:%M:%S'), randint(1, 2), message));
+        
+    
+    for i, job in enumerate(rejectedSet):
+        pet_type = job[0]
+        status = 'Rejected'
+        trans_pr = max(normal(_PET_MEAN_PRICE[_PET_LIST.index(pet_type)], _PT_VARIANCE), min(_PET_MEAN_PRICE))
+        payment_op = 'Credit Card' if random() < _PAYMENT_PROB else 'Cash'
+        if status == 'Completed' and random() < _REVIEW_PROB:
+            rating = '\'' + str(randint(*_PT_REVIEW_BOUNDS)) + '\''
+            review = '\'' + choice(sampleMessages) + '\''
+        else:
+            rating = 'NULL'
+            review = 'NULL'
+
+        if job in pastKeys:
+            continue
+        pastKeys.add(job)
+        if i != 0 or len(partTimeJobs) + len(fullTimeJobs) > 0:
+            lookingOut.write(',\n')
+        lookingOut.write('({}, \'{}\', {}, \'{}\', {}, {})'.format(', '.join('\'{}\''.format(i) for i in job[1:]), status, trans_pr, payment_op, rating, review))
+        messages = generateMessages()
+        totalChatMessages += len(messages)
+        for message in messages:
+            standard = min(_TODAY_DATE, start_date)
+            standard = datetime(standard.year, standard.month, standard.day)
+            standard -= timedelta(days = randint(0, _CHAT_BACKTRACK_DAYS), hours = randint(0, 23), minutes = randint(0, 59), seconds = randint(0, 59))
+            if not isFirstChat:
+                isFirstChat = True
+            else:
+                chatOut.write(',\n');
+            chatOut.write('({}, \'{}\', {}, \'{}\')'.format(', '.join('\'{}\''.format(i) for i in job[1:]), standard.strftime('%Y-%m-%d %H:%M:%S'), randint(1, 2), message));
+
+    lookingOut.write(';\n')
+    chatOut.write(';\n');
+    verbosePrint('\'processed/Looking_After.txt\' written!')
+    verbosePrint('\'processed/Chat.txt\' written!')
+
+writeLog('> Rejected transactions: {}'.format(len(rejectedSet)))
+writeLog('> Total transactions: {}'.format(len(partTimeJobs) + len(fullTimeJobs)))
+writeLog('\t> Total part-time transactions: {}'.format(len(partTimeJobs)))
+writeLog('\t> Total full-time transactions: {}'.format(len(fullTimeJobs)))
+writeLog('> Average part-timer pet days per month: {:.2f}'.format(partTimeBusyDays/len(partTimers)/_TOTAL_MONTHS))
+writeLog('> Average full-timer pet days per month: {:.2f}\n'.format(fullTimeBusyDays/len(fullTimers)/_TOTAL_MONTHS))    
 
 # Output log
 if _SHOW_OUTPUT_SUMMARY:
