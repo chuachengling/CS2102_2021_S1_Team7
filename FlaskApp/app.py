@@ -28,7 +28,7 @@ if not database_url:
                     port=_PORT,
                     database=_DATABASE
                     )
-            app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SECRET_KEY"] = "A random key to use flask extensions that require encryption"
 
 # Initialize other components
@@ -36,11 +36,11 @@ db.init_app(app)
 login_manager.init_app(app)
 
 with app.app_context():
-    initFile = open(('FlaskApp/' if _LOCAL_TESTING else '') + 'sql/init.sql', 'r')
+    initFile = open(('' if _LOCAL_TESTING else 'FlaskApp/') + 'sql/init.sql', 'r')
     db.session.execute(''.join(line.split('--')[0].strip() for line in initFile.readlines()))
     db.session.commit()
     initFile.close()
-    fakeDataFile = open(('FlaskApp/' if _LOCAL_TESTING else '') + 'sql/init.sql', 'r')
+    fakeDataFile = open(('' if _LOCAL_TESTING else 'FlaskApp/') + 'sql/generateFakes/insertAll.sql', 'r')
     db.session.execute(''.join(line.strip() for line in fakeDataFile.readlines()))
     db.session.commit()
     fakeDataFile.close()

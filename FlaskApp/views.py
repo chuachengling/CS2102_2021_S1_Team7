@@ -4,7 +4,6 @@ from flask_bootstrap import Bootstrap
 from __init__ import db, login_manager
 from forms import LoginForm, RegistrationForm, Registration2Form
 view = Blueprint("view",__name__)
-from tables import RecentBooking
 from sqlalchemy import func
 
 @login_manager.user_loader
