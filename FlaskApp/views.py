@@ -3,9 +3,9 @@ from flask_login import current_user, login_required, login_user
 from flask_bootstrap import Bootstrap
 from __init__ import db, login_manager
 from forms import LoginForm, RegistrationForm, Registration2Form
-
 view = Blueprint("view",__name__)
-
+from tables import RecentBooking
+from sqlalchemy import func
 
 @login_manager.user_loader
 def load_user(userid):
@@ -60,11 +60,13 @@ def render_login_page():
         print("userid entered:", form.userid.data)
         print("password entered:", form.password.data)
     if form.validate_on_submit():
-            user = "SELECT * FROM Users u WHERE userid = '{}'".format(userid)        
+            user = "SELECT * FROM Users u WHERE userid = '{}'".format(userid)
+            #db.session.         
             if user:
             # TODO: You may want to verify if password is correct
                 login_user(user)
-            return redirect("/dashboard")
+                #session['name'] = 
+            return redirect("/home")
     return render_template("login.html",form = form)
 
 @view.route('/logout')
@@ -100,16 +102,34 @@ def render_setup_profile():
             .format(userid,name,postal,address,hp,email)
         db.session.execute(query2)
         db.session.commit()
-        return redirect('/dashboard')
+        return redirect('/home')
     return render_template("registration-2.html",form = form)
 
 @view.route("/profile",methods=["GET", "POST"])
 def render_profile():
     return render_template("profile.html")
 
-@view.route("/dashboard",methods=["GET", "POST"])
+@view.route("/home",methods=["GET", "POST"])
 def render_dashboard():
-    return render_template("dashboard.html")
+    if 'user' not in session:
+        redirect('/login')
+    user_name = 'yourmother'
+    #userid = session['userid']
+    data = db.session.query(func.po_upcoming_bookings('spurseyh'))
+    table = []
+
+    for row in data:
+        table.append(dict(zip(('pet_name', 'userid', 'start_date', 'end_date', 'status'), row[0][1:-1].split(","))))
+        # table.append('<tr style="color: black">' + ''.join('<td>{}</td>'.format(i) for i in row) + '<td></td></tr>')
+        # <tr style="color: black">
+        #   <td><a href="16_Pet_profile.html">Xxxxxxxx</a></td>
+        #   <td>caretaker_name</td>
+        #   <td>DDMMYY</td>
+        #   <td>DDMMYY</td>
+        #   <td>PENDING</td>
+        #   <td><a href="8_PO_confirm_chat.html" class="smallbtn">VIEW</a></td>
+        # </tr>
+    return render_template("/5_PO_home.html",user = user_name, table = table)
 
 @view.route("/edit-profile",methods=["GET", "POST"])
 def render_edit_profile():
