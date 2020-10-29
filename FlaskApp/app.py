@@ -29,10 +29,14 @@ db.init_app(app)
 login_manager.init_app(app)
 
 with app.app_context():
-	initFile = open('FlaskApp/sql/init.sql', 'r')
-	db.session.execute(''.join(line.split('--')[0].strip() for line in initFile.readlines()))
-	db.session.commit()
-	initFile.close()
+    initFile = open('FlaskApp/sql/init.sql', 'r')
+    db.session.execute(''.join(line.split('--')[0].strip() for line in initFile.readlines()))
+    db.session.commit()
+    initFile.close()
+    fakeDataFile = open('FlaskApp/sql/init.sql', 'r')
+    db.session.execute(''.join(line.strip() for line in fakeDataFile.readlines()))
+    db.session.commit()
+    fakeDataFile.close()
 
 if __name__ == "__main__":
     app.run(
