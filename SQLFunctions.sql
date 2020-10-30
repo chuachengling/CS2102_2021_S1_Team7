@@ -168,6 +168,20 @@ END;
 $func$
 LANGUAGE plpgsql;
 
+
+CREATE OR REPLACE FUNCTION date (userid VARCHAR)--TODOURGENT: plan to make this a function for exploding dates, for use in above
+RETURNS TABLE (name VARCHAR, pet_name FLOAT, start_date DATE, end_date DATE) AS
+$func$
+BEGIN
+RETURN(
+	SELECT ct.userid AS name, pet_name, start_date, end_date
+	FROM Looking_After
+	WHERE (po_userid = userid OR ct_userid = userid) AND status = 'Completed'
+	);
+END;
+$func$
+LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION bidDetails (userid VARCHAR) --Bidsearchuserid and bidDetails are used for page
 --6 output. so pg 6 will be sth like bidDetails(bidsearchuserid(petname, sd, ed))
 RETURNS TABLE (name VARCHAR, avgrating FLOAT, price FLOAT) AS
