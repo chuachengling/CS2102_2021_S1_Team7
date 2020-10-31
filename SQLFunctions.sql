@@ -125,22 +125,63 @@ LANGUAGE plpgsql;
 
 
 
---TODO: bookings: check FT up to 5 pets, PT up to 2 UNLESS rating good, then up to 5. How to code?
--- for loop? NO. use generate_series
---https://dataschool.com/learn-sql/generate-series/
+CREATE OR REPLACE FUNCTION explode_date (sd DATE, ed DATE)
+--takes in start date, end date. outputs every single day, with each caretaker booked on that day and what pet they looking after
+--get the count of pets by doing groupby day, user.
+--for use in bidsearch function when checking # of pets booked for each caretaker
+RETURNS TABLE (ctuser VARCHAR, pouser VARCHAR, petname VARCHAR, day DATE) AS
+$func$
+BEGIN
+--DECLARE @minDT DATE, @maxDT Date
+--SELECT @minDt =  MIN(start_date) , @,axDt = MAX(end_date) --date range of upcoming accepted pet jobs
+--FROM Looking_After WHERE status = 'Accepted'
+--delete the above 3 lines if this functions works and doesn't need to be fixed
+DECLARE @runDT DATE
+SELECT @runDT = sd
+DECLARE @exploded_table TABLE(ctuser VARCHAR, pouser VARCHAR, petname VARCHAR, dateday DATE)
+
+WHILE @runDT <= ed
+BEGIN
+  INSERT INTO @exploded_table (ctuser, pouser, petname, dateday) SELECT la.ct_userid, la.po_userid, la.pet_name, @runDT FROM Looking_After la WHERE la.start_date <= @runDT AND la.end_date >= @runDT
+  SET @runDT = @runDT + 1
+END
+RETURN(SELECT * FROM @exploded_table);
+END;
+$func$
+LANGUAGE plpgsql;
+
+
+
 CREATE OR REPLACE FUNCTION bidsearchuserid (petname VARCHAR, sd DATE, ed DATE)
 RETURNS TABLE (userid VARCHAR) AS
 $func$
 BEGIN
+
   RETURN(
+  
+  (
+  
   (
 	SELECT ct_userid FROM PT_validpet pt WHERE pt.pet_type IN( --PTCT who can care for this pettype
 		SELECT pet_type FROM Pet p WHERE p.pet_name = petname)
+	)
 	INTERSECTION
 	(
 	SELECT ct_userid FROM PT_Availability --Available PTCT
 	WHERE sd >= avail_sd AND ed <= avail_ed
 	)
+	
+	EXCEPT
+	
+	(
+	SELECT exp.ctuser FROM explode_date(sd, ed) exp --REMOVE from available PTCT those who are fully booked
+	GROUP BY ctuser, day DESC
+	HAVING COUNT(*) >= CASE --define 4 as good rating
+	                    WHEN (SELECT avg(rating) FROM Looking_After la WHERE la.ct_userid = exp.ctuser) > 4 THEN 5
+	                    ELSE 2
+	                  END
+	)
+	
 	)
 	
 	UNION
@@ -155,29 +196,14 @@ BEGIN
 		OR (sd > leave_ed AND sd > leave_ed)
 	  ))
 	  
-	EXCEPT --TODOURGENT: Remove FT caretakers who have >5 pets at any day
-	--https://www.mssqltips.com/sqlservertip/6488/how-to-expand-a-range-of-dates-into-rows-using-a-sql-server-numbers-table/
-	--maybe make this another function???????????????/
+	EXCEPT --Remove FT caretakers who have 5 pets at any day in this date range
 	(
-	SELECT *
-	FROM Looking_After
+	SELECT ctuser FROM explode_date(sd, ed)
+	GROUP BY ctuser, day DESC
+	HAVING COUNT(*) = 5
 	))
 	)
 ;
-END;
-$func$
-LANGUAGE plpgsql;
-
-
-CREATE OR REPLACE FUNCTION date (userid VARCHAR)--TODOURGENT: plan to make this a function for exploding dates, for use in above
-RETURNS TABLE (name VARCHAR, pet_name FLOAT, start_date DATE, end_date DATE) AS
-$func$
-BEGIN
-RETURN(
-	SELECT ct.userid AS name, pet_name, start_date, end_date
-	FROM Looking_After
-	WHERE (po_userid = userid OR ct_userid = userid) AND status = 'Completed'
-	);
 END;
 $func$
 LANGUAGE plpgsql;
@@ -304,9 +330,12 @@ LANGUAGE plpgsql;
 
 -- Page 13
 CREATE OR REPLACE PROCEDURE ft_applyleave(userid VARCHAR, sd DATE, ed DATE) AS
-$func$ --TODO: add a check for if FT has taken too much leave, etc
+$func$ --TODO: add a check for if FT has taken too much leave, 
+--cannot apply leave if >=1 pet under their care
 BEGIN
-  INSERT INTO FT_Leave VALUES (userid, sd, ed);
+  IF --condition to check if pet under their care
+    INSERT INTO FT_Leave VALUES (userid, sd, ed);
+  END IF;
 END;
 $func$
 LANGUAGE plpgsql;
@@ -333,9 +362,11 @@ $func$
 LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE pt_applyavail(userid VARCHAR, sd DATE, ed DATE) AS
-$func$ --TODO: Add check that availability is only for current year and next year
-BEGIN
-  INSERT INTO PT_Availability VALUES (userid, sd, ed);
+$func$ --Checks that PT is applying availability  within the next 2 years
+BEGIN --CURRENT_DATE() is builtin sql function returning current date
+  IF EXTRACT(YEAR FROM CURRENT_DATE()) - EXTRACT(YEAR FROM sd) BETWEEN 0 AND 1 THEN
+    INSERT INTO PT_Availability VALUES (userid, sd, ed);
+  END IF;
 END;
 $func$
 LANGUAGE plpgsql;
