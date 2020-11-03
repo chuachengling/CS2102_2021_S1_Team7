@@ -113,7 +113,7 @@ LANGUAGE plpgsql;
 
 -- Page 5
 CREATE OR REPLACE FUNCTION po_upcoming_bookings(userid VARCHAR)
-RETURNS TABLE (petname VARCHAR, start_date DATE, end_date DATE, status VARCHAR) AS
+RETURNS TABLE (pet_name VARCHAR, start_date DATE, end_date DATE, status VARCHAR) AS
 $func$
 BEGIN
   RETURN(
