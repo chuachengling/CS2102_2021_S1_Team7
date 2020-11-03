@@ -112,15 +112,15 @@ LANGUAGE plpgsql;
 
 
 -- Page 5
-CREATE OR REPLACE FUNCTION po_upcoming_bookings(userid VARCHAR)
-RETURNS TABLE (pet_name VARCHAR, start_date DATE, end_date DATE, status VARCHAR) AS
-$func$
-BEGIN
-  RETURN(
-	SELECT pet_name, start_date, end_date, status FROM Looking_After
-	WHERE ct_userid = userid);
-END;
-$func$
+CREATE OR REPLACE FUNCTION po_upcoming_bookings(userid VARCHAR) 
+RETURNS TABLE (pet_name VARCHAR,ct_userid VARCHAR, start_date DATE, end_date DATE, status VARCHAR) AS 
+$func$ 
+BEGIN 
+  RETURN QUERY( 
+ SELECT a.pet_name, a.ct_userid, a.start_date, a.end_date, a.status FROM Looking_After a 
+ WHERE a.ct_userid = userid); 
+END; 
+$func$ 
 LANGUAGE plpgsql;
 
 
