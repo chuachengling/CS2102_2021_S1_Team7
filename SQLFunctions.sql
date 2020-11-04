@@ -55,7 +55,7 @@ END;
 $func$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE editPTPetsICanCare(userid VARCHAR, pettype VARCHAR, price FLOAT) AS
+CREATE OR REPLACE PROCEDURE addPTPetsICanCare(userid VARCHAR, pettype VARCHAR, price FLOAT) AS
 $func$ --call different function in python depending on pt/ft
 BEGIN
   INSERT INTO PT_validpet VALUES (userid, pettype, price)
@@ -63,10 +63,26 @@ END;
 $func$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE editFTPetsICanCare(userid VARCHAR, pettype VARCHAR) AS
+CREATE OR REPLACE PROCEDURE deletePTPetsICanCare(userid VARCHAR, pettype VARCHAR, price FLOAT) AS
+$func$ --call different function in python depending on pt/ft
+BEGIN
+  DELETE FROM PT_validpet VALUES ct_userid = userid, pet_type = pettype, price = price)
+END;
 $func$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE addFTPetsICanCare(userid VARCHAR, pettype VARCHAR) AS
+$func$ --call different function in python depending on pt/ft
 BEGIN
   INSERT INTO FT_validpet VALUES (userid, pettype)
+END;
+$func$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE deleteFTPetsICanCare(userid VARCHAR, pettype VARCHAR, price FLOAT) AS
+$func$ --call different function in python depending on pt/ft
+BEGIN
+  DELETE FROM FT_validpet VALUES ct_userid = userid, pet_type = pettype)
 END;
 $func$
 LANGUAGE plpgsql;
@@ -84,14 +100,16 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE addPOpets(userid VARCHAR, petname VARCHAR, bday VARCHAR, specreq VARCHAR, pettype VARCHAR) AS
 $func$
 BEGIN
-	INSERT INTO Pet (po_userid, pet_name, birthday, spec_req, pet_type) VALUES (userid, petname, bday, specreq, pettype);
+	INSERT INTO Pet (po_userid, pet_name, dead, birthday, spec_req, pet_type) VALUES (userid, petname, 0, bday, specreq, pettype);
 END;
 $func$
 LANGUAGE plpgsql;
 
+--------- !!!! im not too sure for this - nik
 CREATE OR REPLACE PROCEDURE editPOpets(userid VARCHAR, petname VARCHAR, bday VARCHAR, specreq VARCHAR, pettype VARCHAR, dieded INTEGER) AS
-$func$ --dead = 1 if have change. Need to check if it works, especially if you change name + update dead at same time
---dieded value should be 0 or 1. Too lazy to change this to boolean sry
+$func$ 
+-- dead = 1 if have change. Need to check if it works, especially if you change name + update dead at same time
+-- dieded value should be 0 or 1. Too lazy to change this to boolean sry
 -- deletepet will be done by this too. Or should we split?
 BEGIN
 	UPDATE Pet
@@ -100,6 +118,7 @@ BEGIN
 END;
 $func$
 LANGUAGE plpgsql;
+----------
 
 CREATE OR REPLACE PROCEDURE editBank(userid VARCHAR, bankacc INT) AS
 $func$
@@ -120,9 +139,9 @@ LANGUAGE plpgsql;
 
 
 -- Page 5
---settled
+-- settled
 CREATE OR REPLACE FUNCTION po_upcoming_bookings(userid VARCHAR)
-RETURNS TABLE (pet_name VARCHAR,ct_userid VARCHAR, start_date DATE, end_date DATE, status VARCHAR) AS
+RETURNS TABLE (pet_name VARCHAR, ct_userid VARCHAR, start_date DATE, end_date DATE, status VARCHAR) AS
 $func$
 BEGIN
   RETURN QUERY(
@@ -171,19 +190,19 @@ BEGIN
   (
   
   (
-	SELECT ct_userid FROM PT_validpet pt WHERE pt.pet_type IN( --PTCT who can care for this pettype
+	SELECT ct_userid FROM PT_validpet pt WHERE pt.pet_type IN ( -- PTCT who can care for this pettype
 		SELECT pet_type FROM Pet p WHERE p.pet_name = petname)
 	)
 	INTERSECTION
 	(
-	SELECT ct_userid FROM PT_Availability --Available PTCT
+	SELECT ct_userid FROM PT_Availability -- Available PTCT
 	WHERE sd >= avail_sd AND ed <= avail_ed
 	)
 	
 	EXCEPT
 	
 	(
-	SELECT exp.ctuser FROM explode_date(sd, ed) exp --REMOVE from available PTCT those who are fully booked
+	SELECT exp.ctuser FROM explode_date(sd, ed) exp -- REMOVE from available PTCT those who are fully booked
 	GROUP BY ctuser, day DESC
 	HAVING COUNT(*) >= CASE --define 4 as good rating
 	                    WHEN (SELECT avg(rating) FROM Looking_After la WHERE la.ct_userid = exp.ctuser) > 4 THEN 5
@@ -199,7 +218,7 @@ BEGIN
 	SELECT ct_userid FROM FT_validpet ft WHERE ft.pet_type IN( --FTCT who can care for this pettype
 		SELECT pet_type FROM Pet p WHERE p.pet_name = petname)
 	EXCEPT
-	(SELECT ct_userid FROM FT_Leave --Remove FT who are unavailable. Check that this part works, not sure if logic correct
+	(SELECT ct_userid FROM FT_Leave -- Remove FT who are unavailable. Check that this part works, not sure if logic correct
 	WHERE NOT (
 		(sd < leave_sd AND ed < leave_sd)
 		OR (sd > leave_ed AND sd > leave_ed)
@@ -243,7 +262,7 @@ RETURNS TABLE (name VARCHAR, pet_name FLOAT, start_date DATE, end_date DATE) AS
 $func$
 BEGIN
 RETURN QUERY(
-	SELECT ct.userid AS name, pet_name, start_date, end_date
+	SELECT ct_userid AS name, pet_name, start_date, end_date
 	FROM Looking_After
 	WHERE (po_userid = userid OR ct_userid = userid) AND status = 'Completed'
 	);
