@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
+from wtforms import *
 from wtforms.validators import InputRequired, ValidationError, Email, Length
+from wtforms.fields.html5 import DateField
 
 
 
@@ -70,6 +71,16 @@ class LoginForm(FlaskForm):
         render_kw={'placeholder': 'Password'}
     )
     submit = SubmitField("Submit")
+
+class SearchDate(FlaskForm):
+    pet_name = SelectField(label = 'Pet Name',validators = [InputRequired()])
+    startdate_field = DateField('Start Date', format='%Y-%m-%d')
+    enddate_field = DateField('End Date', format='%Y-%m-%d')
+    submit_field = SubmitField('Search')
+
+    def validate_enddate_field(form, field):
+        if field.data < form.startdate_field.data:
+            raise ValidationError("End date must not be earlier than start date.")
 
 #class ForgotForm(Form):
 #    email = EmailField('Email address', [validators.DataRequired(),validators.Email()])

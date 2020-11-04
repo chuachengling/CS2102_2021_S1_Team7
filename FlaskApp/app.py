@@ -34,11 +34,11 @@ with app.app_context():
 	db.session.commit()
 	initFile.close()
 
-with app.app_context():
-	initFile = open('sql/SQLFunctions.sql', 'r')
-	db.session.execute(''.join(line.split('--')[0].strip() for line in initFile.readlines()))
-	db.session.commit()
-	initFile.close()
+# with app.app_context():
+# 	initFile = open('sql/SQLFunctions.sql', 'r')
+# 	db.session.execute(''.join(line.split('--')[0].strip() for line in initFile.readlines()))
+# 	db.session.commit()
+# 	initFile.close()
 
 if __name__ == "__main__":
     app.run(

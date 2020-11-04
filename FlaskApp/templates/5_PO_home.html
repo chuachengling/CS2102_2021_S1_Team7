@@ -13,7 +13,7 @@ Licence URI: https://www.os-templates.com/template-terms
 <title>Homepage</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link href="static/layout/styles/layout.css" rel="stylesheet" type="text/css" media="all">
+<link href="static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
 </head>
 <body id="top">
 <!-- ################################################################################################ -->
@@ -58,7 +58,7 @@ Licence URI: https://www.os-templates.com/template-terms
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
-<div class="wrapper bgded overlay" style="background-image:url('images/demo/backgrounds/bgg.png');">
+<div class="wrapper bgded overlay" style="background-image:url('static/images_website/bgg.png');">
   <div id="pageintro" class="hoc clear"> 
     <!-- ################################################################################################ -->
     <div class="row">
@@ -85,44 +85,20 @@ Licence URI: https://www.os-templates.com/template-terms
           </tr>
           {% endfor %}
         </table>
-        <br>
-        <br>
-        <br>
-        <br>
-    </article>
-        <br>
-        <br>
-        <br>
-        <br>
-    </article>
     
     <article>  
       <p>I'm looking for someone to take care of:</p>
-        <div class="one_quarter first">
-        <footer>
-          <select name="Pets" style="color: grey">
-            {% for pets in pet %}
-            <option value = pet.name style="color:grey">{{pets.p}}</option>
-            {% endfor %}
-          </select>
-        </footer>
-        </div>
-      
-      <div class="one_quarter ">
-      <p>From: </p>
-        <input type="Date" id="Start" name="looking after start"
-        value={{date_}} min={{date_}} max={{max_date}} style="color: grey"> <!-- change min to today and max to 14 days later -->
-      </div> 
-      
-      <div class="one_quarter "> 
-      <p>To: </p>            
-        <input type="Date" id="Start" name="looking after end"
-        value={{date_}} min={{date_}} max={{max_date}} style="color: grey"> <!-- change min to today and max to 14 days later -->
-      </div>
-      
-      <div class="one_quarter ">       
-        <footer><a class="btn" href="6_PO_search.html">Search</a></footer>
-      </div>      
+
+      <form action="#" method="post" style="color:black">
+          {% for item in form %}
+          {{ item (class_='form-input') }}
+          {% for error in item.errors %}
+          {{ error }}
+          {% endfor %}
+          </p>
+          {% endfor %}
+          {{ form.hidden_tag() }}
+      </form>
     </article>
     <article>
       <br>  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀  ⠀⠀⠀

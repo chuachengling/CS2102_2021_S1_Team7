@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<!--
+Template Name: Bistup
+Author: <a href="https://www.os-templates.com/">OS Templates</a>
+Author URI: https://www.os-templates.com/
+Copyright: OS-Templates.com
+Licence: Free to use under our free template licence terms
+Licence URI: https://www.os-templates.com/template-terms
+-->
+<html lang="">
+<!-- To declare your language - read more here: https://www.w3.org/International/questions/qa-html-language-declarations -->
+<head>
+<title>Pet Stealer</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link href="static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
+</head>
+<body id="top">
+<!-- ################################################################################################ -->
+<!-- ################################################################################################ -->
+<!-- ################################################################################################ -->
+<div class="wrapper row0">
+  <div id="topbar" class="hoc clear"> 
+    <!-- ################################################################################################ -->
+    <div class="fl_right">
+      <ul class="nospace">
+        <li><i class="fas fa-phone rgtspace-5"></i> +65 XXXX XXXX</li>
+        <li><i class="fas fa-envelope rgtspace-5"></i> XXXX@domain.com</li>
+      </ul>
+    </div>
+    <!-- ################################################################################################ -->
+  </div>
+</div>
+<!-- ################################################################################################ -->
+<!-- ################################################################################################ -->
+<!-- ################################################################################################ -->
+<div class="wrapper row1">
+  <header id="header" class="hoc clear"> 
+    <!-- ################################################################################################ -->
+    <div id="logo" class="one_quarter first">
+      <h1><a href="12_FT_home.html">Care Taker</a></h1> <!-- depends if CO and CT overlap -->
+    </div>
+    
+    <div id="logo" class="one_quarter">
+      <h1><a href="5_PO_home.html">Pet Owner</a></h1>
+    </div>
+      
+    <div id="logo" class="one_quarter">
+      <h1><a href="4_settings_profile.html">Profile</a></h1>
+    </div>
+    
+    <div id="logo" class="one_quarter">
+      <h1><a href="9_all_transactions.html">All Transactions</a></h1>
+    </div>
+    <!-- ################################################################################################ -->
+  </header>
+</div>
+<!-- ################################################################################################ -->
+<!-- ################################################################################################ -->
+<!-- ################################################################################################ -->
+<div class="wrapper bgded overlay" style="background-image:url('static/images_website/bgg.png');">
+  <div id="pageintro" class="hoc clear"> 
+    <!-- ################################################################################################ -->
+    <article>
+      <div class="fl_left">
+        <h2 class="heading">Profile of USER</h2>
+      </div>
+      <div class="fl_right">
+        <a class="btn" href="#">DEACTIVATE ACCOUNT</a>
+      </div>
+    </article>
+    <br>
+    <article>
+      <button type="button" class="collapsible">Personal</button>
+        <div class="content" style="color:black">
+          <br>
+          <p>Personal Profile</p>
+          <p>Update Handphone Number: 
+            <span><textarea rows="1" cols="20" style="color: grey">Enter new number here</textarea></span>
+          </p>
+          <p>Update Address: 
+            <span><textarea rows="1" cols="20" style="color: grey">Enter new address here</textarea></span>
+          </p>
+          <p>Change Password: 
+            <span><textarea rows="1" cols="20" style="color: grey">Enter new password here</textarea></span>
+          </p>
+          <form action="/action_page.php">
+            <label for="cars">Pets I can care for:</label>
+            <select name="cars" id="cars" multiple>
+              <option value="Cat">Cat</option>
+              <option value="Dog">Dog</option>
+              <option value="Rabbit">Rabbit</option>
+              <option value="Snake">Snake</option>
+            </select>
+          </form>
+          <div class="fl_right">
+            <footer><a class="btn" href="#">Update</a></footer>  
+            <br> 
+          </div>
+        </div>
+    </article>
+    <br><br><br><br>
+    <article>
+      <button type="button" class="collapsible">Pet</button>
+        <div class="content" style="color:black">
+          <br>
+          <p>Pet Profile</p>
+          <p>This is a test</p>
+          <p>This is a test</p>
+          <p>This is a test</p>
+          <p>This is a test</p>
+        </div>
+    </article>
+    <br><br><br><br>  
+    <article>
+      <button type="button" class="collapsible">Finances</button>
+        <div class="content" style="color:black">
+          <br>
+          <p>This is a test</p>
+          <p>This is a test</p>
+          <p>This is a test</p>
+          <p>This is a test</p>
+          <p>This is a test</p>
+        </div> 
+    </article>    
+    <script>
+    var coll = document.getElementsByClassName("collapsible");
+    var j;
+    for (j = 0; j < coll.length; j++) {
+      coll[j].addEventListener("click", function() {
+        this.classList.toggle("active");
+        var content = this.nextElementSibling;
+        if (content.style.display === "block") {
+          content.style.display = "none";
+        } else {
+          content.style.display = "block";
+        }
+      });
+    }
+    </script> <!-- Don't need open -->     
+</div>
+</div>
+</body>
+</html>

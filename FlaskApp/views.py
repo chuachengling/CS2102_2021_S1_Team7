@@ -1,8 +1,8 @@
-from flask import Blueprint, redirect, render_template, session, escape, request
+from flask import Blueprint, redirect, render_template, session, escape, request, url_for
 from flask_login import current_user, login_required, login_user
 from flask_bootstrap import Bootstrap
 from __init__ import db, login_manager
-from forms import LoginForm, RegistrationForm, Registration2Form
+from forms import *
 from datetime import datetime,date,timedelta
 view = Blueprint("view",__name__)
 #from tables import RecentBooking
@@ -140,7 +140,6 @@ def render_dashboard():
     name = session['name']
     userid = session['userid']
     data = db.session.query(func.po_upcoming_bookings('{}'.format(userid))).all()
-    pet_data = db.session.query(func.find_pets('{}'.format(userid))).all()
     email = session['email']
     hp = db.session.query(func.find_hp('{}'.format(userid))).all()[0][0]
     
@@ -149,7 +148,6 @@ def render_dashboard():
 
     ## init display items
     table = []
-    pet = []
     comp_trans = []
 
     ## date stuff
@@ -157,27 +155,52 @@ def render_dashboard():
     date_ = datetime.strftime(now, "%Y-%m-%d")
     mdate = now + timedelta(days = 365)
     max_date = datetime.strftime(mdate, "%Y-%m-%d")
+
+    form = SearchDate()
+    start_date = form.startdate_field.data
+    end_date = form.enddate_field.data
+    pet_select = form.pet_name.data
+
+    ## Form stuff
+    pet = []
+    pet_data = db.session.query(func.find_pets('{}'.format(userid))).all()
+    # for pets in pet_data:
+    #     pet.append(dict(zip(('pet_name'), pets[0].split(","))))
+    form.pet_name.choices = [('pet_name', i[0]) for i in pet_data]
+    print(pet_data)
     ## start date not > end date
 
     ## end date - start date < 14
-
+    if form.validate_on_submit():
+        session['start_date'] = start_date
+        session['end_date'] = end_date
+        session["pet_selected"] = pet_select
+        return redirect('/search/<start_date>/<end_date>')
 
     for row in data:
         table.append(dict(zip(('pet_name', 'userid', 'start_date', 'end_date', 'status'), row[0][1:-1].split(","))))
-    for pets in pet_data:
-        pet.append(dict(zip(('pet_name'), pets[0].split(","))))
+    
     for item in ct:
         ##need to include link that will take customer to their review page
         comp_trans.append(dict(zip(('pet_name','userid','start_date','end_date'), item[0][1:-1].split(",")))) 
 
-    return render_template("/5_PO_home.html",name = name, \
+    return render_template("/5_PO_home.html",form = form, \
+                                            name = name, \
                                             table = table, \
-                                            pet = pet,\
                                             hp = hp,\
                                             email = email,\
                                             date_ = date_,\
                                             max_date = max_date,\
-                                            comp_trans = comp_trans)
+                                            comp_trans = comp_trans
+                                            )
+
+@view.route("/search/<start_date>/<end_date>",methods=["GET", "POST"])
+def render_search(start_date,end_date):
+    if 'userid' not in session:
+        return redirect('/login')
+    start_date = '2020-11-04'
+    end_date = '2020-11-10'
+    return render_template("/6_PO_search.html", start_date = start_date , end_date = end_date)
 
 @view.route("/edit-profile",methods=["GET", "POST"])
 def render_edit_profile():
