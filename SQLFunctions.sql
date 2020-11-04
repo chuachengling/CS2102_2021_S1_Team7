@@ -1,3 +1,58 @@
+CREATE OR REPLACE FUNCTION bid_search (petname VARCHAR, sd DATE, ed DATE)
+RETURNS TABLE (userid VARCHAR) AS
+$func$
+BEGIN
+  RETURN QUERY(
+  ((
+	SELECT ct_userid FROM PT_validpet pt WHERE pt.pet_type IN (
+		SELECT pet_type FROM Pet p WHERE p.pet_name = petname)
+	)INTERSECTION(
+	SELECT ct_userid FROM PT_Availability
+	WHERE sd >= avail_sd AND ed <= avail_ed
+	)EXCEPT(SELECT exp.ctuser FROM explode_date(sd, ed) exp
+	HAVING COUNT(*) >= CASE
+	                    WHEN (SELECT avg(rating) FROM Looking_After la WHERE la.ct_userid = exp.ctuser) > 4 THEN 5
+	                    ELSE 2
+	                  END)
+	)UNION(
+	SELECT ct_userid FROM FT_validpet ft WHERE ft.pet_type IN(
+		SELECT pet_type FROM Pet p WHERE p.pet_name = petname)
+	EXCEPT(SELECT ct_userid FROM FT_Leave
+	          WHERE NOT ((sd < leave_sd AND ed < leave_sd) OR (sd > leave_ed AND sd > leave_ed)))
+	EXCEPT(
+	SELECT ctuser FROM explode_date(sd, ed)
+	GROUP BY ctuser, day DESC
+	HAVING COUNT(*) = 5
+	)))
+;
+END;
+$func$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION bidDetails (userid VARCHAR)
+RETURNS TABLE (name VARCHAR, avgrating FLOAT, price FLOAT) AS
+$func$
+BEGIN
+RETURN QUERY(
+	SELECT Users.name AS name, AVG(rating) AS avgrating, ftpt.price AS price
+	FROM Users INNER JOIN Looking_After ON Users.userid = Looking_After.ct_userid
+		INNER JOIN 
+		(
+		SELECT ct_userid, pet_type FROM PT_validpet pt
+		UNION
+		SELECT ct_userid, pet_type FROM FT_validpet ft
+		) ftpt ON Users.userid = ftpt.ct_userid
+		WHERE ftpt.userid IN userid
+	GROUP BY ftpt.userid
+	);
+END;
+$func$
+LANGUAGE plpgsql;
+
+------- DELETE ABOVE======
+
+
+
 -- Page 1
 CREATE OR REPLACE FUNCTION login(username VARCHAR, pw VARCHAR)
 RETURNS BOOLEAN AS
@@ -184,48 +239,25 @@ CREATE OR REPLACE FUNCTION bid_search (petname VARCHAR, sd DATE, ed DATE)
 RETURNS TABLE (userid VARCHAR) AS
 $func$
 BEGIN
-
   RETURN QUERY(
-  
-  (
-  
-  (
+  ((
 	SELECT ct_userid FROM PT_validpet pt WHERE pt.pet_type IN ( -- PTCT who can care for this pettype
 		SELECT pet_type FROM Pet p WHERE p.pet_name = petname)
-	)
-	INTERSECTION
-	(
+	)INTERSECTION(
 	SELECT ct_userid FROM PT_Availability -- Available PTCT
 	WHERE sd >= avail_sd AND ed <= avail_ed
-	)
-	
-	EXCEPT
-	
-	(
-	SELECT exp.ctuser FROM explode_date(sd, ed) exp -- REMOVE from available PTCT those who are fully booked
+	)EXCEPT(SELECT exp.ctuser FROM explode_date(sd, ed) exp -- REMOVE from available PTCT those who are fully booked
 	GROUP BY ctuser, day DESC
 	HAVING COUNT(*) >= CASE --define 4 as good rating
 	                    WHEN (SELECT avg(rating) FROM Looking_After la WHERE la.ct_userid = exp.ctuser) > 4 THEN 5
 	                    ELSE 2
-	                  END
-	)
-	
-	)
-	
-	UNION
-	
-	(
+	                  END)
+	)UNION(
 	SELECT ct_userid FROM FT_validpet ft WHERE ft.pet_type IN( --FTCT who can care for this pettype
 		SELECT pet_type FROM Pet p WHERE p.pet_name = petname)
-	EXCEPT
-	(SELECT ct_userid FROM FT_Leave -- Remove FT who are unavailable. Check that this part works, not sure if logic correct
-	WHERE NOT (
-		(sd < leave_sd AND ed < leave_sd)
-		OR (sd > leave_ed AND sd > leave_ed)
-	  ))
-	  
-	EXCEPT --Remove FT caretakers who have 5 pets at any day in this date range
-	(
+	EXCEPT(SELECT ct_userid FROM FT_Leave -- Remove FT who are unavailable. Check that this part works, not sure if logic correct
+	          WHERE NOT ((sd < leave_sd AND ed < leave_sd) OR (sd > leave_ed AND sd > leave_ed)))
+	EXCEPT(--Remove FT caretakers who have 5 pets at any day in this date range
 	SELECT ctuser FROM explode_date(sd, ed)
 	GROUP BY ctuser, day DESC
 	HAVING COUNT(*) = 5
@@ -236,10 +268,9 @@ END;
 $func$
 LANGUAGE plpgsql;
 
- --Bidsearchuserid and bidDetails are used for page
+CREATE OR REPLACE FUNCTION bidDetails (userid VARCHAR) 
+--Bidsearchuserid and bidDetails are used for page
 --6 output. so pg 6 will be sth like bidDetails(bidsearchuserid(petname, sd, ed))
-
-CREATE OR REPLACE FUNCTION bidDetails (userid VARCHAR)
 RETURNS TABLE (name VARCHAR, avgrating FLOAT, price FLOAT) AS
 $func$
 BEGIN
@@ -258,6 +289,8 @@ RETURN QUERY(
 END;
 $func$
 LANGUAGE plpgsql;
+
+
 
 CREATE OR REPLACE FUNCTION pastTransactions (userid VARCHAR)
 RETURNS TABLE (name VARCHAR, pet_name FLOAT, start_date DATE, end_date DATE) AS
