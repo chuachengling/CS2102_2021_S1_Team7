@@ -4,8 +4,8 @@ RETURNS BOOLEAN AS
 $func$
 BEGIN
 	RETURN(SELECT EXISTS(
-		SELECT 1 FROM Accounts
-		WHERE username = userid AND password = pw
+		SELECT 1 FROM Accounts a
+		WHERE login.username = a.userid AND login.pw = a.password
 			));
 END;
 $func$
@@ -19,14 +19,14 @@ $func$
 --function run on page 3, data input on pg 2 and 3
 BEGIN
   IF (  -- for reactivating their acc
-        userid, email, name IN (SELECT userid, email, name FROM Users)
+        signup.userid, signup.email, signup.name IN (SELECT u.userid, u.email, u.name FROM Users u)
         UPDATE Accounts
-        SET deactivate = FALSE
-        WHERE userid = userid
+        SET Accounts.deactivate = FALSE
+        WHERE Accounts.userid = signup.userid
   )
   ELSE ( -- completely new acc
-        INSERT INTO Accounts VALUES (userid, pw, FALSE)
-        INSERT INTO Users VALUES (userid, name, postal, address, hp, email)
+        INSERT INTO Accounts VALUES (signup.userid, signup.pw, FALSE)
+        INSERT INTO Users VALUES (signup.userid, signup.name, signup.postal, signup.address, signup.hp, signup.email)
   );
 END;
 $func$
@@ -180,7 +180,7 @@ LANGUAGE plpgsql;
 
 
 
-CREATE OR REPLACE FUNCTION userid (petname VARCHAR, sd DATE, ed DATE)
+CREATE OR REPLACE FUNCTION bid_search (petname VARCHAR, sd DATE, ed DATE)
 RETURNS TABLE (userid VARCHAR) AS
 $func$
 BEGIN
@@ -236,8 +236,10 @@ END;
 $func$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION bidDetails (userid VARCHAR) --Bidsearchuserid and bidDetails are used for page
+ --Bidsearchuserid and bidDetails are used for page
 --6 output. so pg 6 will be sth like bidDetails(bidsearchuserid(petname, sd, ed))
+
+CREATE OR REPLACE FUNCTION bidDetails (userid VARCHAR)
 RETURNS TABLE (name VARCHAR, avgrating FLOAT, price FLOAT) AS
 $func$
 BEGIN
@@ -360,6 +362,8 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE ft_applyleave(userid VARCHAR, sd DATE, ed DATE) AS
 $func$ --TODO: add a check for if FT has taken too much leave, 
 --cannot apply leave if >=1 pet under their care
+
+--search from ft_leave sd to ed, if userid alredy
 BEGIN
   IF --condition to check if pet under their care
     INSERT INTO FT_Leave VALUES (ft_applyleave.userid, ft_applyleave.sd, ft_applyleave.ed);
@@ -413,6 +417,7 @@ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE ptft_del_date(userid VARCHAR, sd DATE, ed DATE) AS
 $func$ -- No need to check which table user is in, just delete from both pt and ft tables
+-- TODO: Maybe delete, this function sucks
 DECLARE @pt_booked BOOLEAN;
 BEGIN
   DELETE FROM FT_Leave ft WHERE ft.ct_userid = ptft_del_date.userid AND ft.leave_sd = ptft_del_date.sd AND ft.leave_ed = ptft_del_date.ed;
@@ -489,8 +494,8 @@ CREATE OR REPLACE FUNCTION total_pet_day_mnth(userid VARCHAR, year INT, month IN
 RETURNS INT
 $func$
 BEGIN
-  DECLARE @firstday DATE := cast(cast(year AS VARCHAR) + '-' + cast(month AS VARCHAR) + '-01' AS date)
-  DECLARE @lastday DATE := cast(cast(year AS VARCHAR) + '-' + cast((month+1) AS VARCHAR) + '-01' AS date)
+  DECLARE @firstday DATE := cast(cast(total_pet_day_mnth.year AS VARCHAR) + '-' + cast(total_pet_day_mnth.month AS VARCHAR) + '-01' AS date)
+  DECLARE @lastday DATE := cast(cast(total_pet_day_mnth.year AS VARCHAR) + '-' + cast((total_pet_day_mnth.month+1) AS VARCHAR) + '-01' AS date)
 
   RETURN QUERY(
   (SELECT sum(EXTRACT(DAY FROM la.end_date - la.start_date))
@@ -505,17 +510,17 @@ BEGIN
   AND (lab.start_date < firstday AND lab.end_date <= lastday AND lab.end_date >= firstday)
   AND lab.status = 'Completed') --Transaction starts before this month, but ends during
   +
-  (SELECT sum(EXTRACT(DAY FROM lastday - start_date))
-  FROM Looking_After la
-  WHERE userid = la.ct_userid
-  AND (start_date <= lastday AND start_date >= firstday AND end_date > lastday)
-  AND status = 'Completed') --Transaction starts during this month, but ends after
+  (SELECT sum(EXTRACT(DAY FROM lastday - lac.start_date))
+  FROM Looking_After lac
+  WHERE total_pet_day_mnth.userid = lac.ct_userid
+  AND (lac.start_date <= lastday AND lac.start_date >= firstday AND lac.end_date > lastday)
+  AND lac.status = 'Completed') --Transaction starts during this month, but ends after
   +
   (SELECT sum(lastday - firstday)
-  FROM Looking_After la
-  WHERE userid = la.ct_userid
-  AND (start_date < firstday AND end_date > lastday
-  AND status = 'Completed') --Transaction covers whole month, but starts before and ends after
+  FROM Looking_After lad
+  WHERE total_pet_day_mnth.userid = lad.ct_userid
+  AND (lad.start_date < firstday AND lad.end_date > lastday
+  AND lad.status = 'Completed') --Transaction covers whole month, but starts before and ends after
   ); --TODO: maybe delete if we confirm max transactions 2 weeks
 END;
 $func$
@@ -526,15 +531,15 @@ CREATE OR REPLACE FUNCTION trans_this_month(userid VARCHAR, year INT, month INT)
 RETURNS TABLE (po_userid VARCHAR, pet_name VARCHAR, start_date DATE, end_date DATE, rate FLOAT, trans_pr FLOAT) AS
 $func$
 BEGIN
-  DECLARE @firstday DATE := cast(cast(year AS VARCHAR) + '-' + cast(month AS VARCHAR) + '-01' AS date)
-  DECLARE @lastday DATE := cast(cast(year AS VARCHAR) + '-' + cast((month+1) AS VARCHAR) + '-01' AS date)
+  DECLARE @firstday DATE := cast(cast(trans_this_month.year AS VARCHAR) + '-' + cast(trans_this_month.month AS VARCHAR) + '-01' AS date)
+  DECLARE @lastday DATE := cast(cast(trans_this_month.year AS VARCHAR) + '-' + cast((trans_this_month.month+1) AS VARCHAR) + '-01' AS date)
 RETURN QUERY(
-  SELECT po_userid, pet_name, start_date, end_date, trans_pr/(end_date-start_date) AS rate, trans_pr
-  FROM Looking_After
-  WHERE ct_userid = userid
-  AND NOT (start_date < firstday AND end_date < firstday)
-  AND NOT (start_date > lastday AND end_date > lastday)
-  AND status = 'Completed'
+  SELECT la.po_userid, la.pet_name, la.start_date, la.end_date, la.trans_pr/(la.end_date - la.start_date) AS rate, la.trans_pr
+  FROM Looking_After la
+  WHERE la.ct_userid = trans_this_month.userid
+  AND NOT (la.start_date < firstday AND la.end_date < firstday)
+  AND NOT (la.start_date > lastday AND la.end_date > lastday)
+  AND la.status = 'Completed'
   );
 END;
 $func$
@@ -548,8 +553,8 @@ RETURNS TABLE (pet_type VARCHAR, birthday DATE, spec_req VARCHAR) AS
 $func$
 BEGIN
 RETURN QUERY(
-  SELECT pet_type, birthday, spec_req FROM Pet
-  WHERE po_userid = userid AND petname = petname AND dead = 0
+  SELECT p.pet_type, p.birthday, p.spec_req FROM Pet p
+  WHERE p.po_userid = petprofile.userid AND p.petname = petprofile.petname AND p.dead = 0
   );
 END;
 $func$
@@ -561,8 +566,8 @@ CREATE OR REPLACE PROCEDURE admin_modify_base(pet_type VARCHAR, price FLOAT) AS
 $func$
 BEGIN
   UPDATE Pet_Type
-  SET Pet_Type.price = price
-  WHERE Pet_Type.pet_type = pet_type;
+  SET Pet_Type.price = admin_modify_base.price
+  WHERE Pet_Type.pet_type = admin_modify_base.pet_type;
 END;
 $func$
 LANGUAGE plpgsql;
