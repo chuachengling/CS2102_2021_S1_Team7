@@ -18,8 +18,16 @@ CREATE OR REPLACE PROCEDURE signup(userid VARCHAR, name VARCHAR, postal INT, add
 $func$ 
 --function run on page 3, data input on pg 2 and 3
 BEGIN
-	INSERT INTO Accounts VALUES (userid, pw, FALSE)
-	INSERT INTO Users VALUES (userid, name, postal, address, hp, email);
+  IF (  -- for reactivating their acc
+        userid, email, name IN (SELECT userid, email, name FROM Users)
+        UPDATE Accounts
+        SET deactivate = FALSE
+        WHERE userid = userid
+  )
+  ELSE ( -- completely new acc
+        INSERT INTO Accounts VALUES (userid, pw, FALSE)
+        INSERT INTO Users VALUES (userid, name, postal, address, hp, email)
+  );
 END;
 $func$
 LANGUAGE plpgsql;
@@ -146,7 +154,7 @@ BEGIN
   INSERT INTO @exploded_table (ctuser, pouser, petname, dateday) SELECT la.ct_userid, la.po_userid, la.pet_name, @runDT FROM Looking_After la WHERE la.start_date <= @runDT AND la.end_date >= @runDT
   SET @runDT = @runDT + 1
 END
-RETURN(SELECT * FROM @exploded_table);
+RETURN QUERY(SELECT * FROM @exploded_table);
 END;
 $func$
 LANGUAGE plpgsql;
@@ -158,7 +166,7 @@ RETURNS TABLE (userid VARCHAR) AS
 $func$
 BEGIN
 
-  RETURN(
+  RETURN QUERY(
   
   (
   
@@ -214,7 +222,7 @@ CREATE OR REPLACE FUNCTION bidDetails (userid VARCHAR) --Bidsearchuserid and bid
 RETURNS TABLE (name VARCHAR, avgrating FLOAT, price FLOAT) AS
 $func$
 BEGIN
-RETURN(
+RETURN QUERY(
 	SELECT Users.name AS name, AVG(rating) AS avgrating, ftpt.price AS price
 	FROM Users INNER JOIN Looking_After ON Users.userid = Looking_After.ct_userid
 		INNER JOIN 
@@ -234,7 +242,7 @@ CREATE OR REPLACE FUNCTION pastTransactions (userid VARCHAR)
 RETURNS TABLE (name VARCHAR, pet_name FLOAT, start_date DATE, end_date DATE) AS
 $func$
 BEGIN
-RETURN(
+RETURN QUERY(
 	SELECT ct.userid AS name, pet_name, start_date, end_date
 	FROM Looking_After
 	WHERE (po_userid = userid OR ct_userid = userid) AND status = 'Completed'
@@ -250,7 +258,7 @@ CREATE OR REPLACE FUNCTION caretakerReviewRatings (userid VARCHAR)
 RETURNS TABLE (review VARCHAR, rating INTEGER) AS
 $func$
 BEGIN
-RETURN(
+RETURN QUERY(
 	SELECT review, rating
 	FROM Looking_After
 	WHERE ct_userid = userid AND status = 'Completed'
@@ -276,7 +284,7 @@ CREATE OR REPLACE FUNCTION all_your_transac(userid VARCHAR)
 RETURNS TABLE (ct_userid VARCHAR, po_userid VARCHAR, pet_name VARCHAR, start_date DATE, end_date DATE, status VARCHAR, rating FLOAT) AS
 $func$
 BEGIN
-RETURN(
+RETURN QUERY(
 	SELECT ct_userid, po_userid, pet_name, start_date, end_date, status, rating FROM Looking_After
 	WHERE po_userid = userid OR ct_userid = userid
 	);
@@ -291,7 +299,7 @@ CREATE OR REPLACE FUNCTION ct_reviews(userid VARCHAR)
 RETURNS TABLE (ct_userid VARCHAR, po_userid VARCHAR, pet_name VARCHAR, start_date DATE, end_date DATE, status VARCHAR, rating FLOAT, review VARCHAR) AS
 $func$
 BEGIN
-RETURN(
+RETURN QUERY(
 	SELECT ct_userid, po_userid, pet_name, start_date, end_date, status, rating, review FROM Looking_After
 	WHERE ct_userid = userid
 	);
@@ -319,7 +327,7 @@ CREATE OR REPLACE FUNCTION ftpt_upcoming(userid VARCHAR) --ft and pt both use sa
 RETURNS TABLE (ct_userid VARCHAR, petname VARCHAR, start_date DATE, end_date DATE) AS
 $func$
 BEGIN
-RETURN(
+RETURN QUERY(
 	SELECT ct_userid, pet_name, start_date, end_date FROM Looking_After
 	WHERE ct_userid = userid AND status = 'ACCEPTED'
 	);
@@ -345,7 +353,7 @@ CREATE OR REPLACE FUNCTION ft_upcomingapprovedleave(userid VARCHAR)
 RETURNS TABLE (leave_sd DATE, leave_ed DATE) AS
 $func$
 BEGIN
-RETURN(
+RETURN QUERY(
 	SELECT leave_sd, leave_ed FROM FT_Leave
 	WHERE ct_userid = userid
 	);
@@ -376,7 +384,7 @@ CREATE OR REPLACE FUNCTION pt_upcomingavail(userid VARCHAR)
 RETURNS TABLE (avail_sd DATE, avail_ed DATE) AS
 $func$
 BEGIN
-RETURN(
+RETURN QUERY(
 	SELECT avail_sd, avail_ed FROM PT_Availability
 	WHERE ct_userid = userid
 	);
@@ -408,7 +416,7 @@ CREATE OR REPLACE FUNCTION pastsalary(userid VARCHAR)
 RETURNS TABLE (year INT, month INT, salary FLOAT) AS
 $func$
 BEGIN
-RETURN(
+RETURN QUERY(
   SELECT year, month, sum(amount) as salary
   FROM Salary
 	WHERE ct_userid = userid
@@ -428,7 +436,7 @@ BEGIN
   DECLARE @firstday DATE := cast(cast(year AS VARCHAR) + '-' + cast(month AS VARCHAR) + '-01' AS date)
   DECLARE @lastday DATE := cast(cast(year AS VARCHAR) + '-' + cast((month+1) AS VARCHAR) + '-01' AS date)
 
-  RETURN (
+  RETURN QUERY(
   (SELECT sum(trans_pr)
   FROM Looking_After la
   WHERE userid = la.ct_userid
@@ -464,7 +472,7 @@ BEGIN
   DECLARE @firstday DATE := cast(cast(year AS VARCHAR) + '-' + cast(month AS VARCHAR) + '-01' AS date)
   DECLARE @lastday DATE := cast(cast(year AS VARCHAR) + '-' + cast((month+1) AS VARCHAR) + '-01' AS date)
 
-  RETURN (
+  RETURN QUERY(
   (SELECT sum(EXTRACT(DAY FROM end_date - start_date))
   FROM Looking_After la
   WHERE userid = la.ct_userid
@@ -500,7 +508,7 @@ $func$
 BEGIN
   DECLARE @firstday DATE := cast(cast(year AS VARCHAR) + '-' + cast(month AS VARCHAR) + '-01' AS date)
   DECLARE @lastday DATE := cast(cast(year AS VARCHAR) + '-' + cast((month+1) AS VARCHAR) + '-01' AS date)
-RETURN(
+RETURN QUERY(
   SELECT po_userid, pet_name, start_date, end_date, trans_pr/(end_date-start_date) AS rate, trans_pr
   FROM Looking_After
   WHERE ct_userid = userid
@@ -519,7 +527,7 @@ CREATE OR REPLACE FUNCTION petprofile(userid VARCHAR, petname VARCHAR)
 RETURNS TABLE (pet_type VARCHAR, birthday DATE, spec_req VARCHAR) AS
 $func$
 BEGIN
-RETURN(
+RETURN QUERY(
   SELECT pet_type, birthday, spec_req FROM Pet
   WHERE po_userid = userid AND petname = petname AND dead = 0
   );
