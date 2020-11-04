@@ -1,59 +1,4 @@
 
-CREATE OR REPLACE FUNCTION bid_search (petname VARCHAR, sd DATE, ed DATE)
-RETURNS TABLE (userid VARCHAR) AS
-$func$
-BEGIN
-  RETURN QUERY(
-  ((
-	SELECT ct_userid FROM PT_validpet pt WHERE pt.pet_type IN (
-		SELECT pet_type FROM Pet p WHERE p.pet_name = petname)
-	)INTERSECTION(
-	SELECT ct_userid FROM PT_Availability
-	WHERE sd >= avail_sd AND ed <= avail_ed
-	)EXCEPT(SELECT exp.ctuser FROM explode_date(sd, ed) exp
-	HAVING COUNT(*) >= CASE
-	                    WHEN (SELECT avg(rating) FROM Looking_After la WHERE la.ct_userid = exp.ctuser) > 4 THEN 5
-	                    ELSE 2
-	                  END)
-	)UNION(
-	SELECT ct_userid FROM FT_validpet ft WHERE ft.pet_type IN(
-		SELECT pet_type FROM Pet p WHERE p.pet_name = petname)
-	EXCEPT(SELECT ct_userid FROM FT_Leave
-	          WHERE NOT ((sd < leave_sd AND ed < leave_sd) OR (sd > leave_ed AND sd > leave_ed)))
-	EXCEPT(
-	SELECT ctuser FROM explode_date(sd, ed)
-	GROUP BY ctuser, day DESC
-	HAVING COUNT(*) = 5
-	)))
-;
-END;
-$func$
-LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION bidDetails (userid VARCHAR)
-RETURNS TABLE (name VARCHAR, avgrating FLOAT, price FLOAT) AS
-$func$
-BEGIN
-RETURN QUERY(
-	SELECT Users.name AS name, AVG(rating) AS avgrating, ftpt.price AS price
-	FROM Users INNER JOIN Looking_After ON Users.userid = Looking_After.ct_userid
-		INNER JOIN 
-		(
-		SELECT ct_userid, pet_type FROM PT_validpet pt
-		UNION
-		SELECT ct_userid, pet_type FROM FT_validpet ft
-		) ftpt ON Users.userid = ftpt.ct_userid
-		WHERE ftpt.userid IN userid
-	GROUP BY ftpt.userid
-	);
-END;
-$func$
-LANGUAGE plpgsql;
-
-------- DELETE ABOVE======
-
-
-
 -- Page 1
 CREATE OR REPLACE FUNCTION login(username VARCHAR, pw VARCHAR)
 RETURNS BOOLEAN AS
@@ -77,11 +22,11 @@ RETURNS INTEGER AS
 $func$
 DECLARE acc_type INTEGER = 0;
 BEGIN
-  IF (SELECT EXISTS(SELECT 1 FROM Pet_Owner po WHERE po.po_userid = user_type.userid) THEN acc_type = acc_type + 1;
+  IF (SELECT EXISTS(SELECT 1 FROM Pet_Owner po WHERE po.po_userid = user_type.userid)) THEN acc_type = acc_type + 1;
   END IF; -- +1 if PO
-  IF (SELECT EXISTS(SELECT 1 FROM PT_validpet pt WHERE pt.ct_userid = user_type.userid) THEN acc_type = acc_type + 2;
+  IF (SELECT EXISTS(SELECT 1 FROM PT_validpet pt WHERE pt.ct_userid = user_type.userid)) THEN acc_type = acc_type + 2;
   END IF; -- +2 if CTPT
-  IF (SELECT EXISTS(SELECT 1 FROM FT_validpet ft WHERE ft.ct_userid = user_type.userid) THEN acc_type = acc_type + 4;
+  IF (SELECT EXISTS(SELECT 1 FROM FT_validpet ft WHERE ft.ct_userid = user_type.userid)) THEN acc_type = acc_type + 4;
   END IF; -- +4 if CTFT
 	RETURN(acc_type);
 END;
@@ -94,16 +39,11 @@ CREATE OR REPLACE PROCEDURE signup(userid VARCHAR, name VARCHAR, postal INT, add
 $func$ 
 --function run on page 3, data input on pg 2 and 3
 BEGIN
-  IF (  -- for reactivating their acc
-        signup.userid, signup.email, signup.name IN (SELECT u.userid, u.email, u.name FROM Users u)
-        UPDATE Accounts
-        SET Accounts.deactivate = FALSE
-        WHERE Accounts.userid = signup.userid
-  )
-  ELSE ( -- completely new acc
-        INSERT INTO Accounts VALUES (signup.userid, signup.pw, FALSE)
-        INSERT INTO Users VALUES (signup.userid, signup.name, signup.postal, signup.address, signup.hp, signup.email)
-  );
+  INSERT INTO Accounts VALUES (signup.userid, signup.pw)
+  ON CONFLICT (Accounts.userid) DO UPDATE SET Accounts.deactive = FALSE;
+  
+  INSERT INTO Users VALUES (signup.userid, signup.name, signup.postal, signup.address, signup.hp, signup.email)
+  ON CONFLICT (Users.userid) DO UPDATE SET Users.name = EXCLUDED.name, Users.postal = EXCLUDED.postal, Users.address = EXCLUDED.address, Users.hp = EXCLUDED.hp, Users.email = EXCLUDED.email, Users.pw = EXCLUDED.pw;
 END;
 $func$
 LANGUAGE plpgsql;
@@ -114,9 +54,9 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE updateProfile(userid VARCHAR, address VARCHAR, postalcode INT, hpnumber INT) AS
 $func$
 BEGIN
-	UPDATE Users
-	SET postal = postalcode, address = address, hp = hpnumber
-	WHERE userid = userid;
+	UPDATE Users u
+	SET u.postal = updateProfile.postalcode, u.address = updateProfile.address, u.hp = updateProfile.hpnumber
+	WHERE u.userid = updateProfile.userid;
 END;
 $func$
 LANGUAGE plpgsql;
@@ -124,9 +64,9 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE editPW(userid VARCHAR, pw VARCHAR) AS
 $func$
 BEGIN
-	UPDATE Accounts
-	SET pw = pw
-	WHERE userid = userid;
+	UPDATE Accounts a
+	SET a.pw = editPW.pw
+	WHERE a.userid = editPW.userid;
 END;
 $func$
 LANGUAGE plpgsql;
@@ -134,7 +74,7 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE addPTPetsICanCare(userid VARCHAR, pettype VARCHAR, price FLOAT) AS
 $func$ --call different function in python depending on pt/ft
 BEGIN
-  INSERT INTO PT_validpet VALUES (userid, pettype, price)
+  INSERT INTO PT_validpet VALUES (addPTPetsICanCare.userid, addPTPetsICanCare.pettype, addPTPetsICanCare.price)
 END;
 $func$
 LANGUAGE plpgsql;
@@ -142,7 +82,7 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE deletePTPetsICanCare(userid VARCHAR, pettype VARCHAR, price FLOAT) AS
 $func$ --call different function in python depending on pt/ft
 BEGIN
-  DELETE FROM PT_validpet VALUES ct_userid = userid, pet_type = pettype, price = price)
+  DELETE FROM PT_validpet pt VALUES pt.ct_userid = deletePTPetsICanCare.userid, pt.pet_type = deletePTPetsICanCare.pettype, pt.price = deletePTPetsICanCare.price)
 END;
 $func$
 LANGUAGE plpgsql;
@@ -150,7 +90,7 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE addFTPetsICanCare(userid VARCHAR, pettype VARCHAR) AS
 $func$ --call different function in python depending on pt/ft
 BEGIN
-  INSERT INTO FT_validpet VALUES (userid, pettype)
+  INSERT INTO FT_validpet VALUES (addFTPetsICanCare.userid, addFTPetsICanCare.pettype)
 END;
 $func$
 LANGUAGE plpgsql;
@@ -158,7 +98,7 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE deleteFTPetsICanCare(userid VARCHAR, pettype VARCHAR, price FLOAT) AS
 $func$ --call different function in python depending on pt/ft
 BEGIN
-  DELETE FROM FT_validpet VALUES ct_userid = userid, pet_type = pettype)
+  DELETE FROM FT_validpet ft VALUES ft.ct_userid = deleteFTPetsICanCare.userid, ft.pet_type = deleteFTPetsICanCare.pettype)
 END;
 $func$
 LANGUAGE plpgsql;
@@ -166,9 +106,9 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE deleteacc(userid VARCHAR) AS
 $func$
 BEGIN
-  UPDATE Accounts
-  SET deactivate = TRUE
-  WHERE userid = userid;
+  UPDATE Accounts a
+  SET a.deactivate = TRUE
+  WHERE a.userid = deleteacc.userid;
 END;
 $func$
 LANGUAGE plpgsql;
@@ -176,7 +116,7 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE addPOpets(userid VARCHAR, petname VARCHAR, bday VARCHAR, specreq VARCHAR, pettype VARCHAR) AS
 $func$
 BEGIN
-	INSERT INTO Pet (po_userid, pet_name, dead, birthday, spec_req, pet_type) VALUES (userid, petname, 0, bday, specreq, pettype);
+	INSERT INTO Pet VALUES (addPOpets.userid, addPOpets.petname, 0, addPOpets.bday, addPOpets.specreq, addPOpets.pettype);
 END;
 $func$
 LANGUAGE plpgsql;
@@ -188,18 +128,19 @@ $func$
 -- dieded value should be 0 or 1. Too lazy to change this to boolean sry
 -- deletepet will be done by this too. Or should we split?
 BEGIN
-	UPDATE Pet
-	SET pet_name = petname, birthday = bday, spec_req = specreq, pet_type = pettype, dead = (SELECT max(dead)+dieded FROM Pet WHERE po_userid = userid AND pet_name = petname)
-	WHERE po_userid = userid, pet_name = petname;
+	UPDATE Pet p
+	SET p.pet_name = editPOpets.petname, p.birthday = editPOpets.bday, p.spec_req = editPOpets.specreq, p.pet_type = editPOpets.pettype, p.dead = (SELECT max(pa.dead)+editPOpets.dieded FROM Pet pa WHERE pa.po_userid = editPOpets.userid AND pa.pet_name = editPOpets.petname)
+	WHERE p.po_userid = editPOpets.userid, p.pet_name = editPOpets.petname;
 END;
 $func$
 LANGUAGE plpgsql;
-----------
+
 
 CREATE OR REPLACE PROCEDURE editBank(userid VARCHAR, bankacc INT) AS
 $func$
 BEGIN
-  REPLACE INTO Caretaker(ct_userid, bank_acc) VALUES (userid, bankacc)
+  INSERT INTO Caretaker(ct_userid, bank_acc) VALUES (editBank.userid, editBank.bankacc)
+  ON CONFLICT (Caretaker.ct_userid) DO UPDATE SET Caretaker.bank_acc = EXCLUDED.bank_acc;
 END;
 $func$
 LANGUAGE plpgsql;
@@ -207,7 +148,8 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE editCredit(userid VARCHAR, credcard INT) AS
 $func$
 BEGIN
-  REPLACE INTO Pet_Owner(po_userid, credit) VALUES (userid, credcard)
+  INSERT INTO Pet_Owner(po_userid, credit) VALUES (editCredit.userid, editCredit.credcard)
+  ON CONFLICT (Pet_Owner.po_userid) DO UPDATE SET Pet_Owner.credit = editCredit.credcard;
 END;
 $func$
 LANGUAGE plpgsql;
@@ -215,14 +157,13 @@ LANGUAGE plpgsql;
 
 
 -- Page 5
--- settled
 CREATE OR REPLACE FUNCTION po_upcoming_bookings(userid VARCHAR)
 RETURNS TABLE (pet_name VARCHAR, ct_userid VARCHAR, start_date DATE, end_date DATE, status VARCHAR) AS
 $func$
 BEGIN
   RETURN QUERY(
 	SELECT a.pet_name, a.ct_userid, a.start_date, a.end_date, a.status FROM Looking_After a
-	WHERE a.po_userid = userid AND a.status != 'Rejected' AND a.status != 'Completed');
+	WHERE a.po_userid = po_upcoming_bookings.userid AND a.status != 'Rejected' AND a.status != 'Completed');
 END;
 $func$
 LANGUAGE plpgsql;
@@ -262,25 +203,25 @@ $func$
 BEGIN
   RETURN QUERY(
   ((
-	SELECT ct_userid FROM PT_validpet pt WHERE pt.pet_type IN ( -- PTCT who can care for this pettype
-		SELECT pet_type FROM Pet p WHERE p.pet_name = petname)
+	SELECT pt.ct_userid FROM PT_validpet pt WHERE pt.pet_type IN ( -- PTCT who can care for this pettype
+		SELECT p.pet_type FROM Pet p WHERE p.pet_name = bid_search.petname)
 	)INTERSECT(
-	SELECT ct_userid FROM PT_Availability -- Available PTCT
-	WHERE sd >= avail_sd AND ed <= avail_ed
+	SELECT PT_Availaibility.ct_userid FROM PT_Availability -- Available PTCT
+	WHERE bid_search.sd >= PT_Availability.avail_sd AND bid_search.ed <= PT_Availability.avail_ed
 	)EXCEPT(SELECT exp.ctuser FROM explode_date(sd, ed) exp -- REMOVE from available PTCT those who are fully booked
-	GROUP BY ctuser, day DESC
+	GROUP BY exp.ctuser, exp.day DESC
 	HAVING COUNT(*) >= CASE --define 4 as good rating
-	                    WHEN (SELECT avg(rating) FROM Looking_After la WHERE la.ct_userid = exp.ctuser) > 4 THEN 5
+	                    WHEN (SELECT avg(la.rating) FROM Looking_After la WHERE la.ct_userid = exp.ctuser) > 4 THEN 5
 	                    ELSE 2
 	                  END)
 	)UNION(
-	SELECT ct_userid FROM FT_validpet ft WHERE ft.pet_type IN( --FTCT who can care for this pettype
-		SELECT pet_type FROM Pet p WHERE p.pet_name = petname)
-	EXCEPT(SELECT ct_userid FROM FT_Leave -- Remove FT who are unavailable. Check that this part works, not sure if logic correct
-	          WHERE NOT ((sd < leave_sd AND ed < leave_sd) OR (sd > leave_ed AND sd > leave_ed)))
+	SELECT ft.ct_userid FROM FT_validpet ft WHERE ft.pet_type IN( --FTCT who can care for this pettype
+		SELECT p.pet_type FROM Pet p WHERE p.pet_name = bid_search.petname)
+	EXCEPT(SELECT ftl.ct_userid FROM FT_Leave ftl -- Remove FT who are unavailable. Check that this part works, not sure if logic correct
+	          WHERE NOT ((bid_search.sd < ftl.leave_sd AND bid_search.ed < ftl.leave_sd) OR (bid_search.sd > ftl.leave_ed AND bid_search.sd > ftl.leave_ed)))
 	EXCEPT(--Remove FT caretakers who have 5 pets at any day in this date range
-	SELECT ctuser FROM explode_date(sd, ed)
-	GROUP BY ctuser, day DESC
+	SELECT exp2.ctuser FROM explode_date(sd, ed) exp2
+	GROUP BY exp2.ctuser, exp2.day DESC
 	HAVING COUNT(*) = 5
 	))
 	)
@@ -292,6 +233,7 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION bidDetails (userid VARCHAR) 
 --Bidsearchuserid and bidDetails are used for page
 --6 output. so pg 6 will be sth like bidDetails(bidsearchuserid(petname, sd, ed))
+--TODO FIX PRICE!!! Esp for pt
 RETURNS TABLE (name VARCHAR, avgrating FLOAT, price FLOAT) AS
 $func$
 BEGIN
@@ -300,11 +242,11 @@ RETURN QUERY(
 	FROM Users INNER JOIN Looking_After ON Users.userid = Looking_After.ct_userid
 		INNER JOIN 
 		(
-		SELECT ct_userid, pet_type FROM PT_validpet pt
+		SELECT pt.ct_userid AS ct_userid, pt.pet_type AS pet_type FROM PT_validpet pt
 		UNION
-		SELECT ct_userid, pet_type FROM FT_validpet ft
+		SELECT ft.ct_userid AS ct_userid, ft.pet_type AS pet_type FROM FT_validpet ft
 		) ftpt ON Users.userid = ftpt.ct_userid
-		WHERE ftpt.userid IN userid
+		WHERE ftpt.userid IN bidDetails.userid
 	GROUP BY ftpt.userid
 	);
 END;
@@ -318,9 +260,9 @@ RETURNS TABLE (name VARCHAR, pet_name FLOAT, start_date DATE, end_date DATE) AS
 $func$
 BEGIN
 RETURN QUERY(
-	SELECT ct_userid AS name, pet_name, start_date, end_date
-	FROM Looking_After
-	WHERE (po_userid = userid OR ct_userid = userid) AND status = 'Completed'
+	SELECT la.ct_userid AS name, la.pet_name, la.start_date, la.end_date
+	FROM Looking_After la
+	WHERE (la.po_userid = pastTransactions.userid OR la.ct_userid = pastTransactions.userid) AND la.status = 'Completed'
 	);
 END;
 $func$
@@ -329,14 +271,15 @@ LANGUAGE plpgsql;
 
 
 -- Page 6
+--todo create function taking userid, display past ratings n reviews
 CREATE OR REPLACE FUNCTION caretakerReviewRatings (userid VARCHAR)
 RETURNS TABLE (review VARCHAR, rating INTEGER) AS
 $func$
 BEGIN
 RETURN QUERY(
-	SELECT review, rating
-	FROM Looking_After
-	WHERE ct_userid = userid AND status = 'Completed'
+	SELECT la.review, la.rating
+	FROM Looking_After la
+	WHERE la.ct_userid = caretakerReviewRatings.userid AND la.status = 'Completed'
 	);
 END;
 $func$
@@ -348,7 +291,7 @@ CREATE OR REPLACE PROCEDURE applyBooking (pouid VARCHAR, petname VARCHAR, ctuid 
 $func$
 BEGIN
   INSERT INTO Looking_After (po_userid, ct_userid, pet_name, start_date, end_date, trans_pr, payment_op)
-  VALUES (pouid, ctuid, petname, sd, ed, price, payment_op);
+  VALUES (applyBooking.pouid, applyBooking.ctuid, applyBooking.petname, applyBooking.sd, applyBooking.ed, applyBooking.price, applyBooking.payment_op);
 END;
 $func$
 LANGUAGE plpgsql;
@@ -360,8 +303,8 @@ RETURNS TABLE (ct_userid VARCHAR, po_userid VARCHAR, pet_name VARCHAR, start_dat
 $func$
 BEGIN
 RETURN QUERY(
-	SELECT ct_userid, po_userid, pet_name, start_date, end_date, status, rating FROM Looking_After
-	WHERE po_userid = userid OR ct_userid = userid
+	SELECT la.ct_userid, la.po_userid, la.pet_name, la.start_date, la.end_date, la.status, la.rating FROM Looking_After la
+	WHERE la.po_userid = all_your_transac.userid OR la.ct_userid = all_your_transac.userid
 	);
 END;
 $func$
@@ -390,7 +333,7 @@ $func$
 BEGIN
   UPDATE Looking_After la
   SET la.rating=write_review_rating.rating, la.review=write_review_rating.review
-	WHERE la.po_userid = write_review_rating.userid AND la.ct_userid = write_review_rating.ct_userid AND la.start_date = wrote_review_rating.start_date AND la.end_date = write_review_rating.end_date;
+	WHERE la.po_userid = write_review_rating.userid AND la.ct_userid = write_review_rating.ct_userid AND la.start_date = write_review_rating.start_date AND la.end_date = write_review_rating.end_date;
 END;
 $func$
 LANGUAGE plpgsql;
@@ -416,7 +359,6 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE ft_applyleave(userid VARCHAR, sd DATE, ed DATE) AS
 $func$ --TODO: add a check for if FT has taken too much leave, 
 --cannot apply leave if >=1 pet under their care
-
 --search from ft_leave sd to ed, if userid alredy
 BEGIN
   IF --condition to check if pet under their care
@@ -627,7 +569,46 @@ $func$
 LANGUAGE plpgsql;
 
 -- TRIGGERS
-CREATE OR REPLACE FUNCTION check_pt_prices() --Raises PT prices, if admin increases base price
+CREATE OR REPLACE FUNCTION trigger_ft_leave_check()
+RETURNS TRIGGER AS
+--make use of NEW.leave_sd, NEW.leave_ed
+$$ BEGIN
+  IF ( --logic goes here, checkfor 2x150
+    --at least 2 periods of 150 days gap between leave periods. include start of year, end of year
+    (
+    ((SELECT ftl.leave_sd, ftl.leave_ed FROM FT_Leave ftl WHERE NEW.ct_userid = ftl.ct_userid)
+    UNION
+    (SELECT NEW.*) i --the row to be inserted. this line transforms a record into a derived table with 1 row
+    ) AS leave_records
+    --PLAN: cartesian join leave_recordsA with leave_recordsB (B is lagged by 1 record)
+    -- then do rowbyrow check if >= 150, then count(this thing) = 2
+    
+    --NOTE should be for current year only. So do
+    --EXTRACT(YEAR FROM CURRENT_DATE()) = extract...
+    --for the part already done above, to find leave dates for this year only
+    --then maybe end first and last day of year as individual entries? to leave_records
+  
+    ) THEN
+    RAISE EXCEPTION 'You must work 2x150 days a year'
+  ELSE --allows insert to proceed
+    RETURN NEW; --NEW is an autocreated variable. See https://www.postgresql.org/docs/current/plpgsql-trigger.html#PLPGSQL-DML-TRIGGER
+  END IF;
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE TRIGGER enforce_ft_avail INSTEAD OF INSERT ON FT_Leave
+FOR EACH ROW EXECUTE PROCEDURE trigger_ft_leave_check();
+
+
+--possibility 1: att pending/approved status to ftl to see latest added leave
+--after insert, if suddenly invalid for 2x150, then delete pending leave (latest leave)
+--https://www.cybertec-postgresql.com/en/triggers-to-enforce-constraints/
+
+
+--possibility 2: INSTEAD trigger
+--https://www.postgresql.org/docs/9.3/trigger-definition.html#:~:text=If%20a%20trigger%20event%20occurs,be%20modified%20in%20the%20view.
+CREATE OR REPLACE FUNCTION trigger_price_check() --Raises PT prices, if admin increases base price
 RETURNS TRIGGER AS
 $$ BEGIN
   UPDATE pt
@@ -637,6 +618,8 @@ $$ BEGIN
 END;
 $$
 LANGUAGE plpgsql;
-
 CREATE TRIGGER admin_change_price AFTER UPDATE ON Pet_Type
-FOR EACH ROW EXECUTE PROCEDURE check_pt_prices;
+FOR EACH ROW EXECUTE PROCEDURE trigger_price_check();
+--on update of looking after status from pending to accepted
+--AS LONG AS IT BECOMES ACCEPTED (IF FT)
+--cancel all other transactions for that pet in an overlapping date period
