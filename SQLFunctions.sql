@@ -68,6 +68,26 @@ $func$
 LANGUAGE plpgsql;
 
 
+CREATE OR REPLACE FUNCTION user_type(userid VARCHAR)
+-- 1: PO
+-- 2: CTPT    4: CTFT
+-- 3: CTPT+PO  5: CTFT+PO
+-- 0: None
+RETURNS INTEGER AS
+$func$
+DECLARE acc_type INTEGER = 0;
+BEGIN
+  IF (SELECT EXISTS(SELECT 1 FROM Pet_Owner po WHERE po.po_userid = user_type.userid) THEN acc_type = acc_type + 1;
+  END IF; -- +1 if PO
+  IF (SELECT EXISTS(SELECT 1 FROM PT_validpet pt WHERE pt.ct_userid = user_type.userid) THEN acc_type = acc_type + 2;
+  END IF; -- +2 if CTPT
+  IF (SELECT EXISTS(SELECT 1 FROM FT_validpet ft WHERE ft.ct_userid = user_type.userid) THEN acc_type = acc_type + 4;
+  END IF; -- +4 if CTFT
+	RETURN(acc_type);
+END;
+$func$
+LANGUAGE plpgsql;
+
 
 -- Page 2,3
 CREATE OR REPLACE PROCEDURE signup(userid VARCHAR, name VARCHAR, postal INT, address VARCHAR, hp INT, email VARCHAR, pw VARCHAR) AS
@@ -244,7 +264,7 @@ BEGIN
   ((
 	SELECT ct_userid FROM PT_validpet pt WHERE pt.pet_type IN ( -- PTCT who can care for this pettype
 		SELECT pet_type FROM Pet p WHERE p.pet_name = petname)
-	)INTERSECTION(
+	)INTERSECT(
 	SELECT ct_userid FROM PT_Availability -- Available PTCT
 	WHERE sd >= avail_sd AND ed <= avail_ed
 	)EXCEPT(SELECT exp.ctuser FROM explode_date(sd, ed) exp -- REMOVE from available PTCT those who are fully booked
