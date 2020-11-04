@@ -180,7 +180,7 @@ LANGUAGE plpgsql;
 
 
 
-CREATE OR REPLACE FUNCTION bidsearchuserid (petname VARCHAR, sd DATE, ed DATE)
+CREATE OR REPLACE FUNCTION userid (petname VARCHAR, sd DATE, ed DATE)
 RETURNS TABLE (userid VARCHAR) AS
 $func$
 BEGIN
@@ -319,8 +319,8 @@ RETURNS TABLE (ct_userid VARCHAR, po_userid VARCHAR, pet_name VARCHAR, start_dat
 $func$
 BEGIN
 RETURN QUERY(
-	SELECT ct_userid, po_userid, pet_name, start_date, end_date, status, rating, review FROM Looking_After
-	WHERE ct_userid = userid
+	SELECT la.ct_userid, la.po_userid, la.pet_name, la.start_date, la.end_date, la.status, la.rating, la.review FROM Looking_After la
+	WHERE la.ct_userid = ct_reviews.userid
 	);
 END;
 $func$
@@ -332,9 +332,9 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE write_review_rating(userid VARCHAR, pet_name VARCHAR, ct_userid VARCHAR, start_date DATE, end_date DATE, rating INTEGER, review VARCHAR) AS
 $func$
 BEGIN
-  UPDATE Looking_After
-  SET rating=rating, review=review
-	WHERE po_userid = userid AND ct_userid = ct_userid AND start_date = start_date AND end_date = end_date;
+  UPDATE Looking_After la
+  SET la.rating=write_review_rating.rating, la.review=write_review_rating.review
+	WHERE la.po_userid = write_review_rating.userid AND la.ct_userid = write_review_rating.ct_userid AND la.start_date = wrote_review_rating.start_date AND la.end_date = write_review_rating.end_date;
 END;
 $func$
 LANGUAGE plpgsql;
@@ -347,8 +347,8 @@ RETURNS TABLE (ct_userid VARCHAR, petname VARCHAR, start_date DATE, end_date DAT
 $func$
 BEGIN
 RETURN QUERY(
-	SELECT ct_userid, pet_name, start_date, end_date FROM Looking_After
-	WHERE ct_userid = userid AND status = 'ACCEPTED'
+	SELECT la.ct_userid, la.pet_name, la.start_date, la.end_date FROM Looking_After la
+	WHERE la.ct_userid = ftpt_upcoming.userid AND la.status = 'ACCEPTED'
 	);
 END;
 $func$
@@ -362,7 +362,7 @@ $func$ --TODO: add a check for if FT has taken too much leave,
 --cannot apply leave if >=1 pet under their care
 BEGIN
   IF --condition to check if pet under their care
-    INSERT INTO FT_Leave VALUES (userid, sd, ed);
+    INSERT INTO FT_Leave VALUES (ft_applyleave.userid, ft_applyleave.sd, ft_applyleave.ed);
   END IF;
 END;
 $func$
@@ -373,8 +373,8 @@ RETURNS TABLE (leave_sd DATE, leave_ed DATE) AS
 $func$
 BEGIN
 RETURN QUERY(
-	SELECT leave_sd, leave_ed FROM FT_Leave
-	WHERE ct_userid = userid
+	SELECT ftl.leave_sd, ftl.leave_ed FROM FT_Leave ftl
+	WHERE ftl.ct_userid = ft_upcomingapprovedleave.userid
 	);
 END;
 $func$
@@ -384,16 +384,16 @@ CREATE OR REPLACE PROCEDURE ft_cancelleave(userid VARCHAR, sd DATE, ed DATE) AS
 $func$
 BEGIN
   DELETE FROM FT_Leave ft
-  WHERE ft.ct_userid = userid AND ft.avail_sd = sd AND ft.avail_ed = ed ;
+  WHERE ft.ct_userid = ft_cancelleave.userid AND ft.avail_sd = ft_cancelleave.sd AND ft.avail_ed = ft_cancelleave.ed;
 END;
 $func$
 LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE pt_applyavail(userid VARCHAR, sd DATE, ed DATE) AS
-$func$ --Checks that PT is applying availability  within the next 2 years
+$func$ --Checks that PT is applying availability within the next 2 years
 BEGIN --CURRENT_DATE() is builtin sql function returning current date
-  IF EXTRACT(YEAR FROM CURRENT_DATE()) - EXTRACT(YEAR FROM sd) BETWEEN 0 AND 1 THEN
-    INSERT INTO PT_Availability VALUES (userid, sd, ed);
+  IF EXTRACT(YEAR FROM CURRENT_DATE()) - EXTRACT(YEAR FROM pt_applyavail.sd) BETWEEN 0 AND 1 THEN
+    INSERT INTO PT_Availability VALUES (pt_applyavail.userid, pt_applyavail.sd, pt_applyavail.ed);
   END IF;
 END;
 $func$
@@ -404,8 +404,8 @@ RETURNS TABLE (avail_sd DATE, avail_ed DATE) AS
 $func$
 BEGIN
 RETURN QUERY(
-	SELECT avail_sd, avail_ed FROM PT_Availability
-	WHERE ct_userid = userid
+	SELECT pta.avail_sd, pta.avail_ed FROM PT_Availability pta
+	WHERE pta.ct_userid = pt_upcomingavail.userid
 	);
 END;
 $func$
@@ -415,15 +415,15 @@ CREATE OR REPLACE PROCEDURE ptft_del_date(userid VARCHAR, sd DATE, ed DATE) AS
 $func$ -- No need to check which table user is in, just delete from both pt and ft tables
 DECLARE @pt_booked BOOLEAN;
 BEGIN
-  DELETE FROM FT_Leave ft WHERE ft.ct_userid = userid AND ft.leave_sd = sd AND ft.leave_ed = ed;
+  DELETE FROM FT_Leave ft WHERE ft.ct_userid = ptft_del_date.userid AND ft.leave_sd = ptft_del_date.sd AND ft.leave_ed = ptft_del_date.ed;
   
   (
   SELECT CAST(COUNT(*) AS bit) INTO pt_booked -- CAST as boolean value indicating existence of bookings
   FROM Looking_After la
-  WHERE la.ct_userid = userid AND sd <= la.start_date AND ed >= la.end_date AND la.status = 'Pending'
+  WHERE la.ct_userid = ptft_del_date.userid AND ptft_del_date.sd <= la.start_date AND ptft_del_date.ed >= la.end_date AND la.status = 'Pending'
   
   IF pt_booked THEN
-    DELETE FROM PT_Availability pt WHERE pt.ct_userid = userid AND pt.avail_sd = sd AND pt.avail_ed = ed;
+    DELETE FROM PT_Availability pt WHERE pt.ct_userid = ptft_del_date.userid AND pt.avail_sd = ptft_del_date.sd AND pt.avail_ed = ptft_del_date.ed;
   END IF;
   )
 END;
@@ -431,15 +431,16 @@ $func$
 LANGUAGE plpgsql;
 
 -- Page 14
+-- TODO: THIS FUNCTION MAY BE DELETED
 CREATE OR REPLACE FUNCTION pastsalary(userid VARCHAR)
 RETURNS TABLE (year INT, month INT, salary FLOAT) AS
 $func$
 BEGIN
 RETURN QUERY(
-  SELECT year, month, sum(amount) as salary
-  FROM Salary
-	WHERE ct_userid = userid
-	GROUP BY year ASC, month ASC
+  SELECT s.year, s.month, sum(s.amount) as salary
+  FROM Salary s
+	WHERE s.ct_userid = ptft_del_date.userid
+	GROUP BY s.year ASC, s.month ASC
 	);
 END;
 $func$
@@ -452,33 +453,33 @@ CREATE OR REPLACE FUNCTION total_trans_pr_mnth(userid VARCHAR, year INT, month I
 RETURNS FLOAT
 $func$
 BEGIN
-  DECLARE @firstday DATE := cast(cast(year AS VARCHAR) + '-' + cast(month AS VARCHAR) + '-01' AS date)
-  DECLARE @lastday DATE := cast(cast(year AS VARCHAR) + '-' + cast((month+1) AS VARCHAR) + '-01' AS date)
+  DECLARE @firstday DATE := cast(cast(total_trans_pr_mnth.year AS VARCHAR) + '-' + cast(total_trans_pr_mnth.month AS VARCHAR) + '-01' AS date)
+  DECLARE @lastday DATE := cast(cast(total_trans_pr_mnth.year AS VARCHAR) + '-' + cast((total_trans_pr_mnth.month+1) AS VARCHAR) + '-01' AS date)
 
   RETURN QUERY(
-  (SELECT sum(trans_pr)
+  (SELECT sum(la.trans_pr)
   FROM Looking_After la
-  WHERE userid = la.ct_userid
-  AND (start_date >= firstday AND end_date <= lastday
-  AND status = 'Completed') --Transaction occurs completely in this month
+  WHERE total_trans_pr_mnth.userid = la.ct_userid
+  AND (la.start_date >= firstday AND la.end_date <= lastday
+  AND la.status = 'Completed') --Transaction occurs completely in this month
   +
-  (SELECT sum(trans_pr * (end_date - firstday)/(end_date - start_date)) -- Multiplies trans_pr by no. of days that transaction was in this month
-  FROM Looking_After la
-  WHERE userid = la.ct_userid
-  AND (start_date < firstday AND end_date <= lastday AND end_date >= firstday)
-  AND status = 'Completed') --Transaction starts before this month, but ends during
+  (SELECT sum(lab.trans_pr * (lab.end_date - firstday)/(lab.end_date - lab.start_date)) -- Multiplies trans_pr by no. of days that transaction was in this month
+  FROM Looking_After lab
+  WHERE total_trans_pr_mnth.userid = lab.ct_userid
+  AND (lab.start_date < firstday AND lab.end_date <= lastday AND lab.end_date >= firstday)
+  AND lab.status = 'Completed') --Transaction starts before this month, but ends during
   +
-  (SELECT sum(trans_pr * (lastday - start_date)/(end_date - start_date)) -- Multiplies trans_pr by no. of days that transaction was in this month
-  FROM Looking_After la
-  WHERE userid = la.ct_userid
-  AND (start_date <= lastday AND start_date >= firstday AND end_date > lastday)
-  AND status = 'Completed') --Transaction starts during this month, but ends after
+  (SELECT sum(lac.trans_pr * (lastday - lac.start_date)/(lac.end_date - lac.start_date)) -- Multiplies trans_pr by no. of days that transaction was in this month
+  FROM Looking_After lac
+  WHERE total_trans_pr_mnth.userid = lac.ct_userid
+  AND (lac.start_date <= lastday AND lac.start_date >= firstday AND lac.end_date > lastday)
+  AND lac.status = 'Completed') --Transaction starts during this month, but ends after
   +
-  (SELECT sum(trans_pr * (lastday - firstday)/(end_date - start_date))
-  FROM Looking_After la
-  WHERE userid = la.ct_userid
-  AND (start_date < firstday AND end_date > lastday
-  AND status = 'Completed') --Transaction covers whole month, but starts before and ends after
+  (SELECT sum(lad.trans_pr * (lastday - firstday)/(lad.end_date - lad.start_date))
+  FROM Looking_After lad
+  WHERE total_trans_pr_mnth.userid = lad.ct_userid
+  AND (lad.start_date < firstday AND lad.end_date > lastday
+  AND lad.status = 'Completed') --Transaction covers whole month, but starts before and ends after
   ); --TODO: maybe delete if we confirm max transactions 2 weeks
 END;
 $func$
@@ -492,17 +493,17 @@ BEGIN
   DECLARE @lastday DATE := cast(cast(year AS VARCHAR) + '-' + cast((month+1) AS VARCHAR) + '-01' AS date)
 
   RETURN QUERY(
-  (SELECT sum(EXTRACT(DAY FROM end_date - start_date))
+  (SELECT sum(EXTRACT(DAY FROM la.end_date - la.start_date))
   FROM Looking_After la
-  WHERE userid = la.ct_userid
-  AND (start_date >= firstday AND end_date <= lastday
-  AND status = 'Completed') --Transaction occurs completely in this month
+  WHERE total_pet_day_mnth.userid = la.ct_userid
+  AND (la.start_date >= firstday AND la.end_date <= lastday
+  AND la.status = 'Completed') --Transaction occurs completely in this month
   +
-  (SELECT sum(EXTRACT(DAY FROM end_date - firstday))
-  FROM Looking_After la
-  WHERE userid = la.ct_userid
-  AND (start_date < firstday AND end_date <= lastday AND end_date >= firstday)
-  AND status = 'Completed') --Transaction starts before this month, but ends during
+  (SELECT sum(EXTRACT(DAY FROM lab.end_date - firstday))
+  FROM Looking_After lab
+  WHERE total_pet_day_mnth.userid = lab.ct_userid
+  AND (lab.start_date < firstday AND lab.end_date <= lastday AND lab.end_date >= firstday)
+  AND lab.status = 'Completed') --Transaction starts before this month, but ends during
   +
   (SELECT sum(EXTRACT(DAY FROM lastday - start_date))
   FROM Looking_After la
