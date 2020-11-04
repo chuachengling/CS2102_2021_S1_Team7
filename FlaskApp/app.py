@@ -29,7 +29,13 @@ db.init_app(app)
 login_manager.init_app(app)
 
 with app.app_context():
-	initFile = open('sql/init.sql', 'r')
+	initFile = open('sql/init-kindaupdated.sql', 'r')
+	db.session.execute(''.join(line.split('--')[0].strip() for line in initFile.readlines()))
+	db.session.commit()
+	initFile.close()
+
+with app.app_context():
+	initFile = open('sql/SQLFunctions.sql', 'r')
 	db.session.execute(''.join(line.split('--')[0].strip() for line in initFile.readlines()))
 	db.session.commit()
 	initFile.close()

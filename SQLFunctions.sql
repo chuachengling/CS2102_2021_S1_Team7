@@ -1,5 +1,5 @@
 -- Page 1
-CREATE OR REPLACE FUNCTION login(username VARCHAR, password VARCHAR)
+CREATE OR REPLACE FUNCTION login(userid VARCHAR, password VARCHAR)
 RETURNS BOOLEAN AS
 $func$
 BEGIN
@@ -112,11 +112,11 @@ LANGUAGE plpgsql;
 
 -- Page 5
 CREATE OR REPLACE FUNCTION po_upcoming_bookings(userid VARCHAR)
-RETURNS TABLE (petname VARCHAR, start_date DATE, end_date DATE, status VARCHAR) AS
+RETURNS TABLE (petname VARCHAR, ct_userid VARCHAR, start_date DATE, end_date DATE, status VARCHAR) AS
 $func$--Do we want to filter for the immediate upcoming 2 weeks, or just ALL upcoming
 BEGIN
-	SELECT pet_name, start_date, end_date, status FROM Looking_After
-	WHERE ct_userid = userid;
+	SELECT a.pet_name, a.ct_userid, a.start_date, a.end_date, a.status FROM Looking_After a
+	WHERE po_userid = userid; 
 END;
 $func$
 LANGUAGE plpgsql;

@@ -3,8 +3,9 @@ from flask_login import current_user, login_required, login_user
 from flask_bootstrap import Bootstrap
 from __init__ import db, login_manager
 from forms import LoginForm, RegistrationForm, Registration2Form
+from datetime import datetime,date,timedelta
 view = Blueprint("view",__name__)
-from tables import RecentBooking
+#from tables import RecentBooking
 from sqlalchemy import func
 
 @login_manager.user_loader
@@ -56,17 +57,33 @@ def render_registration_page():
 def render_login_page():
     form = LoginForm()
     userid = form.userid.data
+    entered_password = form.password.data
+    email = form.email.data
     if form.is_submitted():
         print("userid entered:", form.userid.data)
         print("password entered:", form.password.data)
     if form.validate_on_submit():
-            user = "SELECT * FROM Users u WHERE userid = '{}'".format(userid)
-            #db.session.         
-            if user:
-            # TODO: You may want to verify if password is correct
-                login_user(user)
-                #session['name'] = 
-            return redirect("/home")
+        exists_user = db.session.execute(func.login(userid,entered_password)).fetchall()  
+        if exists_user:
+            ## Checks if password is correct 
+            login_pass ="SELECT a.password FROM Accounts a WHERE userid = '{}' AND password = '{}'".format(userid,entered_password)  ### Supposed to use function but currently function does not work. 
+            login_password = db.session.execute(login_pass).fetchall()
+
+            ## This equality will throw an error if the database is NOT loaded
+            if login_password[0][0] == entered_password:
+                fetch_name = "SELECT a.name FROM Users a WHERE userid ='{}' AND email = '{}'".format(userid,email)
+                name = db.session.execute(fetch_name).fetchall()
+                
+                ##Updates Session
+                session['name'] = name[0][0]
+                session['userid'] = userid
+                session['password'] = login_password[0][0]
+                session['email'] = email
+
+                return redirect("/home")
+            else:
+                ## Need to think how to reset the page and tell user password is wrong
+                return redirect("/reset")
     return render_template("login.html",form = form)
 
 @view.route('/logout')
@@ -105,31 +122,62 @@ def render_setup_profile():
         return redirect('/home')
     return render_template("registration-2.html",form = form)
 
-@view.route("/profile",methods=["GET", "POST"])
-def render_profile():
+@view.route("/profile/<nickname>",methods=["GET", "POST"])
+def render_profile(nickname):
+    if 'userid' not in session:
+        return redirect('/login')
+    
     return render_template("profile.html")
 
 @view.route("/home",methods=["GET", "POST"])
 def render_dashboard():
-    if 'user' not in session:
-        redirect('/login')
-    user_name = 'yourmother'
-    #userid = session['userid']
-    data = db.session.query(func.po_upcoming_bookings('spurseyh'))
+    
+    ## redirects if the person is not logged in
+    if 'userid' not in session:
+        return redirect('/login')
+    
+    ## initialising information required in web page
+    name = session['name']
+    userid = session['userid']
+    data = db.session.query(func.po_upcoming_bookings('{}'.format(userid))).all()
+    pet_data = db.session.query(func.find_pets('{}'.format(userid))).all()
+    email = session['email']
+    hp = db.session.query(func.find_hp('{}'.format(userid))).all()[0][0]
+    
+    ## completed transactions
+    ct = db.session.query(func.pastTransactions('{}'.format(userid))).all()
+
+    ## init display items
     table = []
+    pet = []
+    comp_trans = []
+
+    ## date stuff
+    now = datetime.now()
+    date_ = datetime.strftime(now, "%Y-%m-%d")
+    mdate = now + timedelta(days = 365)
+    max_date = datetime.strftime(mdate, "%Y-%m-%d")
+    ## start date not > end date
+
+    ## end date - start date < 14
+
 
     for row in data:
         table.append(dict(zip(('pet_name', 'userid', 'start_date', 'end_date', 'status'), row[0][1:-1].split(","))))
-        # table.append('<tr style="color: black">' + ''.join('<td>{}</td>'.format(i) for i in row) + '<td></td></tr>')
-        # <tr style="color: black">
-        #   <td><a href="16_Pet_profile.html">Xxxxxxxx</a></td>
-        #   <td>caretaker_name</td>
-        #   <td>DDMMYY</td>
-        #   <td>DDMMYY</td>
-        #   <td>PENDING</td>
-        #   <td><a href="8_PO_confirm_chat.html" class="smallbtn">VIEW</a></td>
-        # </tr>
-    return render_template("/5_PO_home.html",user = user_name, table = table)
+    for pets in pet_data:
+        pet.append(dict(zip(('pet_name'), pets[0].split(","))))
+    for item in ct:
+        ##need to include link that will take customer to their review page
+        comp_trans.append(dict(zip(('pet_name','userid','start_date','end_date'), item[0][1:-1].split(",")))) 
+
+    return render_template("/5_PO_home.html",name = name, \
+                                            table = table, \
+                                            pet = pet,\
+                                            hp = hp,\
+                                            email = email,\
+                                            date_ = date_,\
+                                            max_date = max_date,\
+                                            comp_trans = comp_trans)
 
 @view.route("/edit-profile",methods=["GET", "POST"])
 def render_edit_profile():
