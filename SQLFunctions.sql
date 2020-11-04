@@ -1,3 +1,4 @@
+
 CREATE OR REPLACE FUNCTION bid_search (petname VARCHAR, sd DATE, ed DATE)
 RETURNS TABLE (userid VARCHAR) AS
 $func$
