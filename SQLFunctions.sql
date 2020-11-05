@@ -217,7 +217,7 @@ BEGIN
   )EXCEPT(SELECT exp.ctuser FROM explode_date(sd, ed) exp -- REMOVE from available PTCT those who are fully booked
   GROUP BY exp.ctuser, exp.day
   HAVING COUNT(*) >= CASE --define 4 as good rating
-                      WHEN (SELECT avg(la.rating) FROM Looking_After la WHERE la.ct_userid = exp.ctuser) > 4 THEN 5
+                      WHEN (SELECT avg(la.rating) FROM Looking_After la WHERE la.ct_userid = exp.ctuser AND (rating = 'Accepted' OR rating = 'Pending')) > 4 THEN 5
                       ELSE 2
                     END)
   )UNION(
