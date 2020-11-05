@@ -209,7 +209,7 @@ BEGIN
 	SELECT PT_Availaibility.ct_userid FROM PT_Availability -- Available PTCT
 	WHERE bid_search.sd >= PT_Availability.avail_sd AND bid_search.ed <= PT_Availability.avail_ed
 	)EXCEPT(SELECT exp.ctuser FROM explode_date(sd, ed) exp -- REMOVE from available PTCT those who are fully booked
-	GROUP BY exp.ctuser, exp.day DESC
+	GROUP BY exp.ctuser, exp.day
 	HAVING COUNT(*) >= CASE --define 4 as good rating
 	                    WHEN (SELECT avg(la.rating) FROM Looking_After la WHERE la.ct_userid = exp.ctuser) > 4 THEN 5
 	                    ELSE 2
@@ -221,7 +221,7 @@ BEGIN
 	          WHERE NOT ((bid_search.sd < ftl.leave_sd AND bid_search.ed < ftl.leave_sd) OR (bid_search.sd > ftl.leave_ed AND bid_search.sd > ftl.leave_ed)))
 	EXCEPT(--Remove FT caretakers who have 5 pets at any day in this date range
 	SELECT exp2.ctuser FROM explode_date(sd, ed) exp2
-	GROUP BY exp2.ctuser, exp2.day DESC
+	GROUP BY exp2.ctuser, exp2.day
 	HAVING COUNT(*) = 5
 	))
 	)
@@ -573,12 +573,22 @@ CREATE OR REPLACE FUNCTION trigger_ft_leave_check()
 RETURNS TRIGGER AS
 --make use of NEW.leave_sd, NEW.leave_ed
 $$ BEGIN
+  SELECT * INTO leave_records FROM
+  ((SELECT ftl.leave_sd, ftl.leave_ed FROM FT_Leave ftl WHERE NEW.ct_userid = ftl.ct_userid)
+    UNION
+    (SELECT NEW.*) i)
+  ORDER BY
+  
+  
+
+
+
+
+
   IF ( --logic goes here, checkfor 2x150
     --at least 2 periods of 150 days gap between leave periods. include start of year, end of year
     (
-    ((SELECT ftl.leave_sd, ftl.leave_ed FROM FT_Leave ftl WHERE NEW.ct_userid = ftl.ct_userid)
-    UNION
-    (SELECT NEW.*) i --the row to be inserted. this line transforms a record into a derived table with 1 row
+    (--the row to be inserted. this line transforms a record into a derived table with 1 row
     ) AS leave_records
     --PLAN: cartesian join leave_recordsA with leave_recordsB (B is lagged by 1 record)
     -- then do rowbyrow check if >= 150, then count(this thing) = 2
