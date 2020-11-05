@@ -40,10 +40,10 @@ $func$
 --function run on page 3, data input on pg 2 and 3
 BEGIN
   INSERT INTO Accounts VALUES (signup.userid, signup.pw)
-  ON CONFLICT (Accounts.userid) DO UPDATE SET Accounts.deactive = FALSE;
+  ON CONFLICT (userid) DO UPDATE SET Accounts.deactive = FALSE;
   
   INSERT INTO Users VALUES (signup.userid, signup.name, signup.postal, signup.address, signup.hp, signup.email)
-  ON CONFLICT (Users.userid) DO UPDATE SET Users.name = EXCLUDED.name, Users.postal = EXCLUDED.postal, Users.address = EXCLUDED.address, Users.hp = EXCLUDED.hp, Users.email = EXCLUDED.email, Users.pw = EXCLUDED.pw;
+  ON CONFLICT (userid) DO UPDATE SET Users.name = EXCLUDED.name, Users.postal = EXCLUDED.postal, Users.address = EXCLUDED.address, Users.hp = EXCLUDED.hp, Users.email = EXCLUDED.email, Users.pw = EXCLUDED.pw;
 END;
 $func$
 LANGUAGE plpgsql;
@@ -113,7 +113,7 @@ END;
 $func$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE PROCEDURE addPOpets(userid VARCHAR, petname VARCHAR, bday VARCHAR, specreq VARCHAR, pettype VARCHAR) AS
+CREATE OR REPLACE PROCEDURE addPOpets(userid VARCHAR, petname VARCHAR, bday DATE, specreq VARCHAR, pettype VARCHAR) AS
 $func$
 BEGIN
 	INSERT INTO Pet VALUES (addPOpets.userid, addPOpets.petname, 0, addPOpets.bday, addPOpets.specreq, addPOpets.pettype);
@@ -140,7 +140,7 @@ CREATE OR REPLACE PROCEDURE editBank(userid VARCHAR, bankacc INT) AS
 $func$
 BEGIN
   INSERT INTO Caretaker(ct_userid, bank_acc) VALUES (editBank.userid, editBank.bankacc)
-  ON CONFLICT (Caretaker.ct_userid) DO UPDATE SET Caretaker.bank_acc = EXCLUDED.bank_acc;
+  ON CONFLICT (ct_userid) DO UPDATE SET Caretaker.bank_acc = EXCLUDED.bank_acc;
 END;
 $func$
 LANGUAGE plpgsql;
@@ -149,7 +149,7 @@ CREATE OR REPLACE PROCEDURE editCredit(userid VARCHAR, credcard INT) AS
 $func$
 BEGIN
   INSERT INTO Pet_Owner(po_userid, credit) VALUES (editCredit.userid, editCredit.credcard)
-  ON CONFLICT (Pet_Owner.po_userid) DO UPDATE SET Pet_Owner.credit = editCredit.credcard;
+  ON CONFLICT (po_userid) DO UPDATE SET Pet_Owner.credit = editCredit.credcard;
 END;
 $func$
 LANGUAGE plpgsql;
@@ -176,21 +176,18 @@ CREATE OR REPLACE FUNCTION explode_date (sd DATE, ed DATE)
 --for use in bidsearch function when checking # of pets booked for each caretaker
 RETURNS TABLE (ctuser VARCHAR, pouser VARCHAR, petname VARCHAR, day DATE) AS
 $func$
+DECLARE
+  runDT DATE;
 BEGIN
---DECLARE @minDT DATE, @maxDT Date
---SELECT @minDt =  MIN(start_date) , @,axDt = MAX(end_date) --date range of upcoming accepted pet jobs
---FROM Looking_After WHERE status = 'Accepted'
---delete the above 3 lines if this functions works and doesn't need to be fixed
-DECLARE @runDT DATE
-SELECT @runDT = sd
-DECLARE @exploded_table TABLE(ctuser VARCHAR, pouser VARCHAR, petname VARCHAR, dateday DATE)
-
-WHILE @runDT <= ed
-BEGIN
-  INSERT INTO @exploded_table (ctuser, pouser, petname, dateday) SELECT la.ct_userid, la.po_userid, la.pet_name, @runDT FROM Looking_After la WHERE la.start_date <= @runDT AND la.end_date >= @runDT
-  SET @runDT = @runDT + 1
-END
-RETURN QUERY(SELECT * FROM @exploded_table);
+  runDT = sd;
+  CREATE TEMP TABLE exploded_table(ctuser VARCHAR, pouser VARCHAR, petname VARCHAR, dateday DATE) ON COMMIT DROP;
+  WHILE runDT <= ed LOOP
+    INSERT INTO exploded_table
+    SELECT la.ct_userid, la.po_userid, la.pet_name, runDT
+    FROM Looking_After la WHERE la.start_date <= runDT AND la.end_date >= runDT;
+    runDT := runDT + 1;
+  END LOOP;
+  RETURN QUERY SELECT * FROM exploded_table;
 END;
 $func$
 LANGUAGE plpgsql;
@@ -206,7 +203,7 @@ BEGIN
 	SELECT pt.ct_userid FROM PT_validpet pt WHERE pt.pet_type IN ( -- PTCT who can care for this pettype
 		SELECT p.pet_type FROM Pet p WHERE p.pet_name = bid_search.petname)
 	)INTERSECT(
-	SELECT PT_Availaibility.ct_userid FROM PT_Availability -- Available PTCT
+	SELECT PT_Availability.ct_userid FROM PT_Availability -- Available PTCT
 	WHERE bid_search.sd >= PT_Availability.avail_sd AND bid_search.ed <= PT_Availability.avail_ed
 	)EXCEPT(SELECT exp.ctuser FROM explode_date(sd, ed) exp -- REMOVE from available PTCT those who are fully booked
 	GROUP BY exp.ctuser, exp.day
@@ -319,7 +316,7 @@ $func$
 BEGIN
 RETURN QUERY(
 	SELECT la.ct_userid, la.po_userid, la.pet_name, la.start_date, la.end_date, la.status, la.rating, la.review FROM Looking_After la
-	WHERE la.ct_userid = ct_reviews.userid
+	WHERE la.ct_userid = ct_reviews.userid AND status = 'Completed'
 	);
 END;
 $func$
@@ -361,7 +358,7 @@ $func$ --TODO: add a check for if FT has taken too much leave,
 --cannot apply leave if >=1 pet under their care
 --search from ft_leave sd to ed, if userid alredy
 BEGIN
-  IF --condition to check if pet under their care
+  IF --TODO: condition to check if pet under their care
     INSERT INTO FT_Leave VALUES (ft_applyleave.userid, ft_applyleave.sd, ft_applyleave.ed);
   END IF;
 END;
@@ -391,8 +388,8 @@ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE pt_applyavail(userid VARCHAR, sd DATE, ed DATE) AS
 $func$ --Checks that PT is applying availability within the next 2 years
-BEGIN --CURRENT_DATE() is builtin sql function returning current date
-  IF EXTRACT(YEAR FROM CURRENT_DATE()) - EXTRACT(YEAR FROM pt_applyavail.sd) BETWEEN 0 AND 1 THEN
+BEGIN --CURRENT_DATE is builtin sql function returning current date
+  IF EXTRACT(YEAR FROM CURRENT_DATE) - EXTRACT(YEAR FROM pt_applyavail.sd) BETWEEN 0 AND 1 THEN
     INSERT INTO PT_Availability VALUES (pt_applyavail.userid, pt_applyavail.sd, pt_applyavail.ed);
   END IF;
 END;
@@ -571,53 +568,42 @@ LANGUAGE plpgsql;
 -- TRIGGERS
 CREATE OR REPLACE FUNCTION trigger_ft_leave_check()
 RETURNS TRIGGER AS
---make use of NEW.leave_sd, NEW.leave_ed
 $$ BEGIN
+  --TEMP TABLE is to allow correct calculation
+  CREATE TEMPORARY TABLE year_start_end(
+  leave_sd DATE,
+  leave_ed DATE
+  ) ON COMMIT DROP;
+  INSERT INTO year_start_end VALUES (CAST(CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS VARCHAR) + '-01-01' AS DATE), CAST(CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS VARCHAR) + '-01-01' AS DATE));
+  INSERT INTO year_start_end VALUES (CAST(CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS VARCHAR) + '-12-31' AS DATE), CAST(CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS VARCHAR) + '-12-31' AS DATE));
+  
   SELECT * INTO leave_records FROM
   ((SELECT ftl.leave_sd, ftl.leave_ed FROM FT_Leave ftl WHERE NEW.ct_userid = ftl.ct_userid)
     UNION
-    (SELECT NEW.*) i)
-  ORDER BY
-  
-  
+    (SELECT NEW.*) i
+    UNION
+    (year_start_end)
+    )
+  WHERE EXTRACT(YEAR FROM CURRENT_DATE) = EXTRACT(YEAR FROM NEW.leave_sd)
+  ORDER BY ftl.leave_sd; --has all leave records for the user being inserted
 
+  SELECT (lr.leave_ed - LEAD(lr.leave_sd,1)) AS diff INTO days_avail FROM leave_records lr;
 
-
-
-
-  IF ( --logic goes here, checkfor 2x150
-    --at least 2 periods of 150 days gap between leave periods. include start of year, end of year
-    (
-    (--the row to be inserted. this line transforms a record into a derived table with 1 row
-    ) AS leave_records
-    --PLAN: cartesian join leave_recordsA with leave_recordsB (B is lagged by 1 record)
-    -- then do rowbyrow check if >= 150, then count(this thing) = 2
-    
-    --NOTE should be for current year only. So do
-    --EXTRACT(YEAR FROM CURRENT_DATE()) = extract...
-    --for the part already done above, to find leave dates for this year only
-    --then maybe end first and last day of year as individual entries? to leave_records
-  
-    ) THEN
+  IF (SELECT COUNT(*) FROM days_avail WHERE diff >= 150) = 2 OR (SELECT COUNT(*) FROM days_avail WHERE diff >= 300) = 1 THEN
     RAISE EXCEPTION 'You must work 2x150 days a year'
-  ELSE --allows insert to proceed
-    RETURN NEW; --NEW is an autocreated variable. See https://www.postgresql.org/docs/current/plpgsql-trigger.html#PLPGSQL-DML-TRIGGER
+  ELSE
+    RETURN NEW;
   END IF;
+  DROP TABLE year_start_end;
 END;
 $$
 LANGUAGE plpgsql;
-
 CREATE TRIGGER enforce_ft_avail INSTEAD OF INSERT ON FT_Leave
 FOR EACH ROW EXECUTE PROCEDURE trigger_ft_leave_check();
 
 
---possibility 1: att pending/approved status to ftl to see latest added leave
---after insert, if suddenly invalid for 2x150, then delete pending leave (latest leave)
---https://www.cybertec-postgresql.com/en/triggers-to-enforce-constraints/
 
 
---possibility 2: INSTEAD trigger
---https://www.postgresql.org/docs/9.3/trigger-definition.html#:~:text=If%20a%20trigger%20event%20occurs,be%20modified%20in%20the%20view.
 CREATE OR REPLACE FUNCTION trigger_price_check() --Raises PT prices, if admin increases base price
 RETURNS TRIGGER AS
 $$ BEGIN
@@ -625,11 +611,29 @@ $$ BEGIN
   SET pt.price = base.price
   FROM PT_validpet pt LEFT JOIN Pet_Type base ON pt.pet_type = base.pet_type
   WHERE pt.price < base.price
+  
+  RETURN NULL; --Doesn't matter, but just for clarity.
 END;
 $$
 LANGUAGE plpgsql;
-CREATE TRIGGER admin_change_price AFTER UPDATE ON Pet_Type
+CREATE TRIGGER admin_changed_price AFTER UPDATE ON Pet_Type
 FOR EACH ROW EXECUTE PROCEDURE trigger_price_check();
---on update of looking after status from pending to accepted
---AS LONG AS IT BECOMES ACCEPTED (IF FT)
---cancel all other transactions for that pet in an overlapping date period
+
+
+
+CREATE OR REPLACE FUNCTION trigger_pending_check()
+RETURNS TRIGGER AS
+$$ BEGIN
+  IF NEW.status = 'Accepted' THEN
+    UPDATE Looking_After la
+    SET status = 'Rejected'
+    WHERE la.po_userid = NEW.po_userid AND la.pet_name = NEW.pet_name
+    AND NOT (la.start_date < NEW.start_date AND la.end_date < NEW.start_date)
+    AND NOT (la.start_date > NEW.end_date AND la.end_date > NEW.end_date)
+  END IF;
+  RETURN NULL; --Doesn't matter, but just for clarity.
+END;
+$$
+LANGUAGE plpgsql;
+CREATE TRIGGER cancel_pending_bids AFTER UPDATE ON Looking_After OR INSERT ON Looking_After
+FOR EACH ROW EXECUTE PROCEDURE trigger_pending_check();
