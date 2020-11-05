@@ -615,7 +615,7 @@ $$ BEGIN
 
   IF (SELECT EXISTS(SELECT 1 FROM leave_records lr2 WHERE NEW.leave_sd BETWEEN SYMMETRIC lr2.leave_ed AND lr2.leave_sd))
   OR (SELECT EXISTS(SELECT 1 FROM leave_records lr2 WHERE NEW.leave_ed BETWEEN SYMMETRIC lr2.leave_ed AND lr2.leave_sd)) THEN
-    RAISE EXCEPTION 'FUCK OFF YOU ALR ON LEAVE';
+    RAISE EXCEPTION 'You are already on leave';
   END IF;
   
   INSERT INTO leave_records VALUES (NEW.leave_sd, NEW.leave_ed);
