@@ -514,6 +514,27 @@ $func$
 LANGUAGE plpgsql;
 
 
+-- fulltime gets 3k for up to 60 petdays. excess pet days, 80% of price as bonus
+-- pt 75% as payment
+CREATE OR REPLACE FUNCTION what_salary(userid VARCHAR, dur DATE)
+RETURNS FLOAT4 AS
+$func$
+DECLARE
+  earnings FLOAT;
+BEGIN
+  earnings = total_trans_pr_mnth (userid, EXTRACT(YEAR FROM dur), EXTRACT(MONTH FROM dur));
+  IF (SELECT full_time FROM Caretaker ct WHERE ct.ct_userid = userid) THEN
+    IF total_pet_day_mnth (userid, EXTRACT(YEAR FROM dur), EXTRACT(MONTH FROM dur)) <= 60 THEN
+      RETURN 3000;
+    ELSE
+      RETURN 3000 + (earnings - 3000) * 0.8;
+  ELSE --parttime
+    RETURN earnings * 0.75;
+  END IF;
+END;
+$func$
+LANGUAGE plpgsql;
+  
 
 
 CREATE OR REPLACE FUNCTION total_trans_pr_mnth(userid VARCHAR, year INT, month INT)
