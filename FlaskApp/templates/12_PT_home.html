@@ -10,7 +10,7 @@ Licence URI: https://www.os-templates.com/template-terms
 <html lang="">
 <!-- To declare your language - read more here: https://www.w3.org/International/questions/qa-html-language-declarations -->
 <head>
-<title>Pet Stealer</title>
+<title>Part Time Homepage</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link href="static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
@@ -42,7 +42,7 @@ Licence URI: https://www.os-templates.com/template-terms
     </div>
     
     <div id="logo" class="one_quarter">
-      <h1><a href="5_PO_home.html">Pet Owner</a></h1>
+      <h1><a href="/po_home">Pet Owner</a></h1>
     </div>
       
     <div id="logo" class="one_quarter">
@@ -63,7 +63,7 @@ Licence URI: https://www.os-templates.com/template-terms
     <!-- ################################################################################################ -->
     <article>
       <div class="fl_left">
-        <h2 class="heading">Hi ________, </h2>
+        <h2 class="heading">Hi {{name}}, </h2>
       </div>
       <div class="fl_right">
         <a class="btn" href="13_PT_avail.html">State Availability</a>
@@ -85,23 +85,24 @@ Licence URI: https://www.os-templates.com/template-terms
             <th>Pet Owner's Name</th>
             <th>Start Date</th>
             <th>End Date</th>
-            <th></th>
+            <th>View Chat</th>
         </tr>
-        <tr style="color: black">
+        <!-- <tr style="color: black">
           <td><a href="16_Pet_profile.html">Xxxxxxxx</a></td>
           <td>pet_owner</td>
           <td>DDMMYY</td>
           <td>DDMMYY</td>
           <td><a href="8_PO_confirm_chat.html" class="smallbtn">VIEW</a></td>
-        </tr>
-        <tr style="color: black">
-          <td><a href="16_Pet_profile.html">Xxxxxxxx</a></td>
-          <td>pet_owner</td>
-          <td>DDMMYY</td>
-          <td>DDMMYY</td>
-          <td><a href="8_PO_confirm_chat.html" class="smallbtn">VIEW</a></td>
-        </tr>
-        </table>
+        </tr> -->
+        {% for item in upcoming_jobs %}
+          <tr style="color:black">
+            <td>{{item.pet_name}}</td>
+            <td>{{item.userid}}</td>
+            <td>{{item.start_date}}</td>
+            <td>{{item.end_date}}</td>
+            <td></td>
+          </tr>
+          {% endfor %}
     </article>
 
     <article>
@@ -114,22 +115,17 @@ Licence URI: https://www.os-templates.com/template-terms
             <th>Pet Owner's Name</th>
             <th>Start Date</th>
             <th>End Date</th>
-            <th></th>
+            <th>View Chat</th>
         </tr>
-        <tr style="color: black">
-          <td><a href="16_Pet_profile.html">Xxxxxxxx</a></td>
-          <td>pet_owner</td>
-          <td>DDMMYY</td>
-          <td>DDMMYY</td>
-          <td><a href="8_PO_confirm_chat.html" class="smallbtn">VIEW</a></td>
+        {% for item in pending_jobs %}
+        <tr style="color:black">
+          <td>{{item.pet_name}}</td>
+          <td>{{item.userid}}</td>
+          <td>{{item.start_date}}</td>
+          <td>{{item.end_date}}</td>
+          <td></td>
         </tr>
-        <tr style="color: black">
-          <td><a href="16_Pet_profile.html">Xxxxxxxx</a></td>
-          <td>pet_owner</td>
-          <td>DDMMYY</td>
-          <td>DDMMYY</td>
-          <td><a href="8_PO_confirm_chat.html" class="smallbtn">VIEW</a></td>
-        </tr>
+        {% endfor %}
         </table>
     </article> 
 </div>

@@ -1,10 +1,12 @@
 from flask import Flask
+from flask_bootstrap import Bootstrap
 import os
 
 from __init__ import db, login_manager
 from views import view
 
 app = Flask(__name__)
+Bootstrap(app)
 
 # Local test variables
 _LOCAL_TESTING = False
@@ -44,6 +46,10 @@ with app.app_context():
     db.session.execute(''.join(line.strip() for line in fakeDataFile.readlines()))
     db.session.commit()
     fakeDataFile.close()
+    sqlFunctionsFile = open(('' if _LOCAL_TESTING else 'FlaskApp/') + 'sql/insertFunctions.sql', 'r')
+    db.session.execute(''.join(line.strip() for line in sqlFunctionsFile.readlines()))
+    db.session.commit()
+    sqlFunctionsFile.close()
 
 if __name__ == "__main__":
     app.run(

@@ -63,7 +63,7 @@ Licence URI: https://www.os-templates.com/template-terms
     <!-- ################################################################################################ -->
     <article>
       <div class="fl_left">
-        <h2 class="heading">Hi ________, </h2>
+        <h2 class="heading">Hi {{name}}, </h2>
       </div>
       <div class="fl_right">
         <a class="btn" href="13_FT_leave.html">Apply Leave</a>
@@ -85,22 +85,24 @@ Licence URI: https://www.os-templates.com/template-terms
             <th>Pet Owner's Name</th>
             <th>Start Date</th>
             <th>End Date</th>
-            <th></th>
+            <th>View Chat</th>
         </tr>
-        <tr style="color: black">
+        <!-- <tr style="color: black">
           <td><a href="16_Pet_profile.html">Xxxxxxxx</a></td>
           <td>pet_owner</td>
           <td>DDMMYY</td>
           <td>DDMMYY</td>
           <td><a href="8_PO_confirm_chat.html" class="smallbtn">VIEW</a></td>
-        </tr>
-        <tr style="color: black">
-          <td><a href="16_Pet_profile.html">Xxxxxxxx</a></td>
-          <td>pet_owner</td>
-          <td>DDMMYY</td>
-          <td>DDMMYY</td>
-          <td><a href="8_PO_confirm_chat.html" class="smallbtn">VIEW</a></td>
-        </tr>
+        </tr> -->
+        {% for item in upcoming_jobs %}
+          <tr style="color:black">
+            <td>{{item.pet_name}}</td>
+            <td>{{item.userid}}</td>
+            <td>{{item.start_date}}</td>
+            <td>{{item.end_date}}</td>
+            <td></td>
+          </tr>
+          {% endfor %}
     </article>
 </div>
 </div>
