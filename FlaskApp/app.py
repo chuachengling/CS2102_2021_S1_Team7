@@ -42,14 +42,14 @@ with app.app_context():
     db.session.execute(''.join(line.split('--')[0].strip() for line in initFile.readlines()))
     db.session.commit()
     initFile.close()
+    sqlFunctionsFile = open(('' if _LOCAL_TESTING else 'FlaskApp/') + 'sql/insertFunctions.sql', 'r')
+    db.session.execute(''.join(line.split('--')[0].strip() for line in sqlFunctionsFile.readlines()))
+    db.session.commit()
+    sqlFunctionsFile.close()
     fakeDataFile = open(('' if _LOCAL_TESTING else 'FlaskApp/') + 'sql/generateFakes/insertAll.sql', 'r')
     db.session.execute(''.join(line.strip() for line in fakeDataFile.readlines()))
     db.session.commit()
     fakeDataFile.close()
-    sqlFunctionsFile = open(('' if _LOCAL_TESTING else 'FlaskApp/') + 'sql/insertFunctions.sql', 'r')
-    db.session.execute(''.join(line.strip() for line in sqlFunctionsFile.readlines()))
-    db.session.commit()
-    sqlFunctionsFile.close()
 
 if __name__ == "__main__":
     app.run(
