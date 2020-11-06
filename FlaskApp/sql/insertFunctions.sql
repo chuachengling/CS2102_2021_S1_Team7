@@ -252,7 +252,7 @@ RETURN QUERY(
         UNION
         SELECT ft.ct_userid AS ct_userid, ft.pet_type AS pet_type FROM FT_validpet ft
         ) ftpt ON Users.userid = ftpt.ct_userid
-        WHERE ftpt.userid IN bidDetails.userid
+    WHERE ftpt.userid = userid
     GROUP BY ftpt.userid
     );
 END;
@@ -528,6 +528,7 @@ BEGIN
       RETURN 3000;
     ELSE
       RETURN 3000 + (earnings - 3000) * 0.8;
+    END IF;
   ELSE --parttime
     RETURN earnings * 0.75;
   END IF;
@@ -650,7 +651,7 @@ $$ BEGIN
   --RAISE NOTICE '%', days_avail.diff;
   
   
-  IF NOT ((SELECT COUNT(*) FROM days_avail WHERE diff >= 150) = 2) OR ((SELECT COUNT(*) FROM days_avail WHERE diff >= 300) = 1) THEN
+  IF NOT (((SELECT COUNT(*) FROM days_avail WHERE diff >= 150) = 2) OR ((SELECT COUNT(*) FROM days_avail WHERE diff >= 300) = 1)) THEN
     RAISE EXCEPTION 'You must work 2x150 days a year';
   END IF;
   

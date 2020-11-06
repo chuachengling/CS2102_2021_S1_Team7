@@ -293,6 +293,12 @@ with open('processed/PT_Availability.txt', 'w') as ptAvailOut:
     ptAvailOut.write(';\n')
     verbosePrint('\'processed/PT_Availability.txt\' written!')
 
+def checkLeave(leaveSoFar, upcoming):
+    leftDates = [date(2019, 12, 31)] + [i[1] for i in leaveSoFar] + [upcoming[0]]
+    rightDates = [i[0] for i in leaveSoFar] + [upcoming[0], date(2021, 1, 1)]
+    return sum(((pair[1] - pair[0]).days-1)//150 for pair in zip(leftDates, rightDates)) >= 2
+
+
 fullTimeTotalDays = 0
 fullTimeLeave = {}
 for fullTimer in fullTimers:
@@ -308,8 +314,9 @@ for fullTimer in fullTimers:
                 startDay = currentDay
         if isLeave:
             if (currentDay - startDay).days == _FT_MAX_RUN or random() < _FT_END_PROB or dayDelta == totalDays-1:
-                fullTimeLeave[fullTimer].append((startDay, currentDay))
-                fullTimeTotalDays += (currentDay - startDay).days + 1
+                if checkLeave(fullTimeLeave[fullTimer], (startDay, currentDay)):
+                    fullTimeLeave[fullTimer].append((startDay, currentDay))
+                    fullTimeTotalDays += (currentDay - startDay).days + 1
                 isLeave = False
 
 writeLog('> Average full-timer coverage: {:.2f}%\n'.format(100 - 100*fullTimeTotalDays/(len(fullTimers)*(totalDays+1))))
