@@ -158,21 +158,20 @@ LANGUAGE plpgsql;
 
 -- Page 5
 CREATE OR REPLACE FUNCTION po_upcoming_bookings(userid VARCHAR)
-RETURNS TABLE (pet_name VARCHAR, ct_userid VARCHAR, start_date DATE, end_date DATE, status VARCHAR) AS
+RETURNS TABLE (pet_name VARCHAR, ct_userid VARCHAR, start_date DATE, end_date DATE, status VARCHAR, dead INTEGER) AS
 $func$
 BEGIN
   RETURN QUERY(
-	SELECT pet_name,name,start_date,end_date,status FROM(
-  SELECT a.pet_name, a.ct_userid, a.start_date, a.end_date, a.status FROM Looking_After a
+	SELECT b.pet_name,c.name,b.start_date,b.end_date,b.status,b.dead FROM(
+  SELECT a.pet_name, a.ct_userid, a.start_date, a.end_date, a.status, a.dead FROM Looking_After a
 	WHERE a.po_userid = po_upcoming_bookings.userid AND a.status != 'Rejected' AND a.status != 'Completed') AS b
   INNER JOIN 
-  (SELECT * FROM Users u WHERE u.userid = ct_userid ) AS c ON c.userid = b.ct_userid
+  (SELECT u.name,u.userid FROM Users u ) AS c ON c.userid = b.ct_userid
   );
 END;
 $func$
 LANGUAGE plpgsql;
 --
-
 
 CREATE OR REPLACE FUNCTION explode_date (sd DATE, ed DATE)
 --takes in start date, end date. outputs every single day, with each caretaker booked on that day and what pet they looking after
@@ -257,13 +256,16 @@ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION pastTransactions (userid VARCHAR)
-RETURNS TABLE (name VARCHAR, pet_name FLOAT, start_date DATE, end_date DATE) AS
+RETURNS TABLE (name VARCHAR, pet_name VARCHAR, start_date DATE, end_date DATE) AS
 $func$
 BEGIN
 RETURN QUERY(
-	SELECT la.ct_userid AS name, la.pet_name, la.start_date, la.end_date
+  SELECT b.pet_name, c.name, b.start_date, b.end_date FROM
+	(SELECT  la.pet_name,la.ct_userid , la.start_date, la.end_date
 	FROM Looking_After la
-	WHERE (la.po_userid = pastTransactions.userid OR la.ct_userid = pastTransactions.userid) AND la.status = 'Completed'
+	WHERE (la.po_userid = pastTransactions.userid OR la.ct_userid = pastTransactions.userid) AND la.status = 'Completed') AS b
+  INNER JOIN 
+  (SELECT u.name, u.userid FROM Users u) AS c ON c.userid = b.ct_userid
 	);
 END;
 $func$
