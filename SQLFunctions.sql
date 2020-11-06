@@ -244,17 +244,17 @@ RETURNS TABLE (name VARCHAR, avgrating FLOAT, price FLOAT) AS
 $func$
 BEGIN
 RETURN QUERY(
-	SELECT Users.name AS name, AVG(rating) AS avgrating, ftpt.price AS price
-	FROM Users INNER JOIN Looking_After ON Users.userid = Looking_After.ct_userid
-		INNER JOIN 
-		(
-		SELECT pt.ct_userid AS ct_userid, pt.pet_type AS pet_type FROM PT_validpet pt
-		UNION
-		SELECT ft.ct_userid AS ct_userid, ft.pet_type AS pet_type FROM FT_validpet ft
-		) ftpt ON Users.userid = ftpt.ct_userid
-		WHERE ftpt.userid IN bidDetails.userid
-	GROUP BY ftpt.userid
-	);
+    SELECT Users.name AS name, AVG(rating) AS avgrating, ftpt.price AS price
+    FROM Users INNER JOIN Looking_After ON Users.userid = Looking_After.ct_userid
+        INNER JOIN 
+        (
+        SELECT pt.ct_userid AS ct_userid, pt.pet_type AS pet_type FROM PT_validpet pt
+        UNION
+        SELECT ft.ct_userid AS ct_userid, ft.pet_type AS pet_type FROM FT_validpet ft
+        ) ftpt ON Users.userid = ftpt.ct_userid
+        WHERE ftpt.userid IN bidDetails.userid
+    GROUP BY ftpt.userid
+    );
 END;
 $func$
 LANGUAGE plpgsql;
@@ -312,9 +312,9 @@ RETURNS TABLE (ct_userid VARCHAR, po_userid VARCHAR, pet_name VARCHAR, start_dat
 $func$
 BEGIN
 RETURN QUERY(
-	SELECT la.ct_userid, la.po_userid, la.pet_name, la.start_date, la.end_date, la.status, la.rating FROM Looking_After la
-	WHERE la.po_userid = all_your_transac.userid OR la.ct_userid = all_your_transac.userid
-	);
+    SELECT la.ct_userid, la.po_userid, la.pet_name, la.start_date, la.end_date, la.status, la.rating FROM Looking_After la
+    WHERE la.po_userid = all_your_transac.userid OR la.ct_userid = all_your_transac.userid
+    );
 END;
 $func$
 LANGUAGE plpgsql;
@@ -327,9 +327,9 @@ RETURNS TABLE (ct_userid VARCHAR, po_userid VARCHAR, pet_name VARCHAR, start_dat
 $func$
 BEGIN
 RETURN QUERY(
-	SELECT la.ct_userid, la.po_userid, la.pet_name, la.start_date, la.end_date, la.status, la.rating, la.review FROM Looking_After la
-	WHERE la.ct_userid = ct_reviews.userid AND la.status = 'Completed'
-	);
+    SELECT la.ct_userid, la.po_userid, la.pet_name, la.start_date, la.end_date, la.status, la.rating, la.review FROM Looking_After la
+    WHERE la.ct_userid = ct_reviews.userid AND la.status = 'Completed'
+    );
 END;
 $func$
 LANGUAGE plpgsql;
@@ -342,7 +342,7 @@ $func$
 BEGIN
   UPDATE Looking_After la
   SET rating=write_review_rating.rating, review=write_review_rating.review
-	WHERE la.po_userid = write_review_rating.userid AND la.ct_userid = write_review_rating.ct_userid AND la.start_date = write_review_rating.start_date AND la.end_date = write_review_rating.end_date;
+    WHERE la.po_userid = write_review_rating.userid AND la.ct_userid = write_review_rating.ct_userid AND la.start_date = write_review_rating.start_date AND la.end_date = write_review_rating.end_date;
 END;
 $func$
 LANGUAGE plpgsql;
@@ -405,9 +405,9 @@ RETURNS TABLE (leave_sd DATE, leave_ed DATE) AS
 $func$
 BEGIN
 RETURN QUERY(
-	SELECT ftl.leave_sd, ftl.leave_ed FROM FT_Leave ftl
-	WHERE ftl.ct_userid = ft_upcomingapprovedleave.userid
-	);
+    SELECT ftl.leave_sd, ftl.leave_ed FROM FT_Leave ftl
+    WHERE ftl.ct_userid = ft_upcomingapprovedleave.userid
+    );
 END;
 $func$
 LANGUAGE plpgsql;
@@ -437,9 +437,9 @@ RETURNS TABLE (avail_sd DATE, avail_ed DATE) AS
 $func$
 BEGIN
 RETURN QUERY(
-	SELECT pta.avail_sd, pta.avail_ed FROM PT_Availability pta
-	WHERE pta.ct_userid = pt_upcomingavail.userid
-	);
+    SELECT pta.avail_sd, pta.avail_ed FROM PT_Availability pta
+    WHERE pta.ct_userid = pt_upcomingavail.userid
+    );
 END;
 $func$
 LANGUAGE plpgsql;
@@ -470,9 +470,9 @@ BEGIN
 RETURN QUERY(
   SELECT s.year, s.month, sum(s.amount) as salary
   FROM Salary s
-	WHERE s.ct_userid = ptft_del_date.userid
-	GROUP BY s.year, s.month
-	);
+    WHERE s.ct_userid = ptft_del_date.userid
+    GROUP BY s.year, s.month
+    );
 END;
 $func$
 LANGUAGE plpgsql;
