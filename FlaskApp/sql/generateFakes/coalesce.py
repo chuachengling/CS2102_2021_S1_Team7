@@ -404,7 +404,7 @@ for partTimer in partTimeAvail:
             partTimeJobs.append((rollPet, *rollExact, partTimer, _START_DATE + timedelta(days = rollStart), _START_DATE + timedelta(days = rollEnd)))
 
 sampleMessages = []
-with open('raw/sampleMessages.txt', 'r') as sampleIn:
+with open('raw/sampleMessagesFormatted.txt', 'r') as sampleIn:
     for line in sampleIn:
         if not line.strip() or '\'' in line:
             continue
