@@ -1,11 +1,12 @@
 from flask import Flask
 import os
+from flask_bootstrap import Bootstrap
 
 from __init__ import db, login_manager
 from views import view
 
 app = Flask(__name__)
-
+Bootstrap(app)
 # Routing
 app.register_blueprint(view)
 
@@ -28,11 +29,11 @@ app.config["SECRET_KEY"] = "A random key to use flask extensions that require en
 db.init_app(app)
 login_manager.init_app(app)
 
-with app.app_context():
-	initFile = open('sql/init-kindaupdated.sql', 'r')
-	db.session.execute(''.join(line.split('--')[0].strip() for line in initFile.readlines()))
-	db.session.commit()
-	initFile.close()
+# with app.app_context():
+# 	initFile = open('sql/init.sql', 'r')
+# 	db.session.execute(''.join(line.split('--')[0].strip() for line in initFile.readlines()))
+# 	db.session.commit()
+# 	initFile.close()
 
 # with app.app_context():
 # 	initFile = open('sql/SQLFunctions.sql', 'r')
