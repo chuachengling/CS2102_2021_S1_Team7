@@ -355,6 +355,8 @@ for fullTimer in fullTimeAvail:
             rollEnd = randint(*dateRange)
             if rollStart > rollEnd:
                 rollStart, rollEnd = rollEnd, rollStart
+            if rollEnd - rollStart > _FT_MAX_RUN:
+                rollEnd = rollStart + _FT_MAX_RUN
             for i in range(rollStart, rollEnd+1):
                 if (i, rollExact) in petAvailability or ((i, fullTimer) in fullTimeAvailability and fullTimeAvailability[(i, fullTimer)] == 5) or rollExact[0] == fullTimer:
                     if rollExact[0] != fullTimer:
@@ -388,6 +390,8 @@ for partTimer in partTimeAvail:
                 rollEnd = randint(*dateRange)
                 if rollStart > rollEnd:
                     rollStart, rollEnd = rollEnd, rollStart
+                if rollEnd - rollStart > _PT_MAX_RUN:
+                    rollEnd = rollStart + _PT_MAX_RUN
                 for i in range(rollStart, rollEnd+1):
                     if (i, rollExact) in petAvailability or ((i, partTimer) in partTimeAvailability and partTimeAvailability[(i, partTimer)] == 5) or rollExact[0] == partTimer:
                         if rollExact[0] != partTimer:
@@ -397,10 +401,10 @@ for partTimer in partTimeAvail:
                 petAvailability.add((i, rollExact))
                 partTimeAvailability[(i, partTimer)] = partTimeAvailability.get((i, partTimer), 0) + 1
             partTimeBusyDays += rollEnd - rollStart + 1
-            partTimeJobs.append((rollPet, *rollExact, partTimer, _START_DATE + timedelta(days = rollStart), _END_DATE + timedelta(days = rollEnd)))
+            partTimeJobs.append((rollPet, *rollExact, partTimer, _START_DATE + timedelta(days = rollStart), _START_DATE + timedelta(days = rollEnd)))
 
 sampleMessages = []
-with open('raw/sampleMessages.txt', 'r') as sampleIn:
+with open('raw/sampleMessagesFormatted.txt', 'r') as sampleIn:
     for line in sampleIn:
         if not line.strip() or '\'' in line:
             continue
