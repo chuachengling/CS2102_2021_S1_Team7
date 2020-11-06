@@ -71,7 +71,7 @@ pet_type 	VARCHAR NOT NULL REFERENCES Pet_type (pet_type)
 CREATE TABLE Pet (
 	po_userid 	VARCHAR NOT NULL REFERENCES Pet_Owner (po_userid),
 	pet_name 	VARCHAR NOT NULL,
-	dead 		INTEGER DEFAULT 0,
+	dead 		INTEGER NOT NULL DEFAULT 0,
 	birthday 	DATE DEFAULT NULL,
 	spec_req 	VARCHAR DEFAULT NULL,
 	pet_type 	VARCHAR NOT NULL REFERENCES Pet_Type (pet_type),
@@ -110,7 +110,7 @@ CREATE TABLE Looking_After (
 	status 	VARCHAR NOT NULL DEFAULT 'Pending' CHECK(status = 'Completed' OR status = 'Accepted' OR status = 'Pending' OR status = 'Rejected'),
 	trans_pr 	FLOAT4 NOT NULL CHECK(trans_pr > 0),
 	payment_op 	VARCHAR NOT NULL CHECK(payment_op = 'Credit Card' OR payment_op = 'Cash'),
-	rating 	INTEGER DEFAULT NULL,
+	rating 	FLOAT8 DEFAULT NULL,
 	review 	VARCHAR DEFAULT NULL,
 	CHECK (date(start_date) <= date(end_date)),
 	PRIMARY KEY (po_userid, ct_userid, pet_name, dead, start_date, end_date),
@@ -130,7 +130,7 @@ CREATE TABLE Chat (
 	time 		TIMESTAMPTZ,
 	sender 	INTEGER CHECK (sender = 1 OR sender = 2 OR sender = 3),
 	text 		VARCHAR,
-	FOREIGN KEY (po_userid, ct_userid, pet_name, dead, start_date, end_date) REFERENCES Looking_After (po_userid, ct_userid, pet_name, dead, start_date, end_date),
+	FOREIGN KEY (po_userid, ct_userid, pet_name, dead, start_date, end_date) REFERENCES Looking_After (po_userid, ct_userid, pet_name, dead, start_date, end_date) ON UPDATE CASCADE,
 	PRIMARY KEY (po_userid, ct_userid, pet_name, dead, start_date, end_date, time, sender)
 );
 
