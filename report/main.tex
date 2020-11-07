@@ -137,7 +137,7 @@
         \item A pet has a birthday, name, special requests and a dead flag.
         \begin{itemize}
             \item A pet can be uniquely identified by its pet name and dead flag knowing the Pet Owner. (Weak entity - identity dependency) This means an owner cannot have two (live) pets with the same name.
-            \item The dead flag is 0 if the pet is still in the care of the Pet Owner. If the Pet Owner 'deletes' the pet, the dead flag will be set to 1, or incrementally higher integers if the Pet Owner had previously-deleted pets with the same name.
+            \item The dead flag is 0 if the pet is still in the care of the Pet Owner. If the Pet Owner `deletes' the pet, the dead flag will be set to 1, or incrementally higher integers if the Pet Owner had previously-deleted pets with the same name.
         \end{itemize}
         \item A pet is an instance of a pet type.
         \item A pet type contains details about the particular pet type and also its daily base price (set by the Administrator)
@@ -164,7 +164,7 @@
         \end{itemize}
         \item Each transaction can be accompanied by a series of chat messages which contains the time sent and the text message itself
         \begin{itemize}
-            \item A chat message can be uniquely identified with the sender (an integer indicating if it's the Pet Owner, Caretaker or system), time and the transaction's key (Caretaker ID, Pet Owner ID, pet ID and time period) (Weak entity - identity dependency)
+            \item A chat message can be uniquely identified with the sender (an integer indicating if it's the Pet Owner, Caretaker or system), time and the transaction's key (Caretaker ID, Pet Owner ID, Pet Name, dead flag and time period) (Weak entity - identity dependency).
         \end{itemize}
     \end{itemize}
     
@@ -172,47 +172,47 @@
     \begin{itemize}
         \item Pet Owner - Pets
         \begin{itemize}
-            \item A Pet Owner may own multiple pets
-            \item A pet must be owned by one owner
+            \item A Pet Owner may own multiple pets.
+            \item A pet must be owned by one owner.
         \end{itemize}
         \item Pets - Pet type
         \begin{itemize}
-            \item A pet must be classified under one pet type
-            \item A pet type classification may encompass many different pets
+            \item A pet must be classified under one pet type.
+            \item A pet type classification may encompass many different pets.
         \end{itemize}
         \item Caretaker - Pet type
         \begin{itemize}
-            \item A Caretaker may care for various kinds of pet types
-            \item Many Caretakers may care for the same pet type
+            \item A Caretaker may care for various kinds of pet types.
+            \item Many Caretakers may care for the same pet type.
         \end{itemize}
         \item Part-Timer - Availabilities
         \begin{itemize}
-            \item A Part-Timer may indicate availabilities for multiple periods
-            \item Many Part-Timers may indicate availabilities for the same period
+            \item A Part-Timer may indicate availabilities for multiple periods.
+            \item Many Part-Timers may indicate availabilities for the same period.
 	    \end{itemize}
         \item Full-Timer - Leave
         \begin{itemize}
-            \item A Full-Timer may apply for leave for multiple periods
-            \item Many Full-Timers may apply for leave for the same period
+            \item A Full-Timer may apply for leave for multiple periods.
+            \item Many Full-Timers may apply for leave for the same period.
 	    \end{itemize}
         \item Looking after
         \begin{itemize}
-            \item A Caretaker may look after many pets
-            \item Many Caretakers may look after the same pet
+            \item A Caretaker may look after many pets.
+            \item Many Caretakers may look after the same pet for a different time period.
         \end{itemize}
     \end{itemize}
     
     \item Numerical diagram-nonenforceable constraints
     \begin{itemize}
-        \item A Part-Timer's availability periods cannot overlap
-        \item A Full-Timer's leave periods cannot overlap
-        \item A Full-Timer cannot apply for leave if the 2*150 consecutive working days requirement cannot be fulfilled after the application of leave
-        \item A Caretaker cannot look after his/her own pet
-        \item A review/rating for a transaction can only be filled after the transaction is marked as `Completed'
-        \item A pet that is being looked after by the Caretaker must be classified as one of the pet types that the Caretaker can care for
+        \item A Part-Timer's availability periods cannot overlap.
+        \item A Full-Timer's leave periods cannot overlap.
+        \item A Full-Timer cannot apply for leave if the (150 consecutive working days * 2) requirement cannot be fulfilled after the application of leave.
+        \item A Caretaker cannot look after his/her own pet.
+        \item A review/rating for a transaction can only be filled after the transaction is marked as `Completed'.
+        \item A pet that is being looked after by the Caretaker must be classified as one of the pet types that the Caretaker can care for.
         \item Any two transactions that involve the same pet and do not have the status `Rejected' cannot clash in terms of dates.
         \item The number of combined `Pending' and `Accepted' transactions for any Caretaker for any particular day cannot exceed 5 for a Full-Timer or highly rated Part-Timer, and cannot exceed 2 for a non-highly rated Part-Timer.
-        \item An `Accepted' or `Completed' transaction for a Caretaker must fall within his/her availabilities (if he/she is a Part-Timer) and must not fall within his/her leave periods (if he/she is a Full-Timer)
+        \item An `Accepted' or `Completed' transaction for a Caretaker must fall within his/her availabilities (if he/she is a Part-Timer) and must not fall within his/her leave periods (if he/she is a Full-Timer).
     \end{itemize}
     
     \item Other assumptions
@@ -237,7 +237,7 @@ Our group also has some constraints that are not enforced by the relational sche
     \item We used a trigger to check that the price set by Part-Time Caretakers are at least as high as the price set by Admin for Full-Time Caretakers. This is to ensure that the Pet Owners would not solely only engage Part-Timers because they can set lower prices.
     \item We also used triggers to ensure that the (150 days * 2) requirement needed for Full-Timers will be able to be fulfilled or has already been fulfilled before the leave is approved.
     \item In the \texttt{PT\_Availability} table, we need to ensure that the the Caretaker is a Part-Timer and in \texttt{FT\_Leave} table, we need to ensure that the Caretaker is a Full-Timer
-    \item In the \texttt{Looking\_After} table, we use triggers to ensure that once a booking has been confirmed, all other pending bookings which overlap with the accepted booking will be rejected. 
+    \item In the \texttt{Looking\_After} table, we use triggers to ensure that once a booking has been confirmed, all other pending bookings under the same Caretaker which overlap with the accepted booking will be rejected. 
 \end{itemize}
 
 
@@ -266,7 +266,7 @@ When the Full-Timers apply for leave, the requirement of (150 days * 2) must sti
 
 \newpage
 \subsection{Trigger 3: \texttt{trigger\_pending\_check}}
-When the status of a booking has been changed to `Accepted', all other bookings for the pet will be cancelled if there are other bookings with an overlapping date.
+When the status of a booking has been updated or inserted as `Accepted', all other pending bookings for the pet in this booking will be cancelled if they overlap dates with the 'Accepted' booking.
 \begin{figure}[H]
 \inputminted[breaklines, tabsize=8, obeytabs, fontsize=\footnotesize]{postgresql}{./codes/trigger_pending_check.sql}
 \end{figure}
