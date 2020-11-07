@@ -1,0 +1,352 @@
+\documentclass[10pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+% Margins
+\usepackage[margin=2cm]{geometry}
+% Math and symbols
+\usepackage{amsmath}
+\usepackage{amssymb}
+% Syntax highlighting
+\usepackage{minted}
+% Inclusion of pictures
+\usepackage{graphicx}
+\graphicspath{{./images/}}
+% No paragraph indentations
+\setlength{\parindent}{0pt}
+% Enable customized lists
+\usepackage{enumitem}
+% Citations
+\usepackage[nottoc]{tocbibind}
+% Colour
+\usepackage{xcolor}
+% Links
+\usepackage{hyperref}
+
+\usepackage{ragged2e}
+
+\title{CS2102 Database System: PCS Application}
+\author{
+    \begin{tabular}{ccccc}
+        Chua Cheng Ling & Colin Ng Chenyu & Lee Yong Jie Richard & Nikole Pang & Tristan Chua Zhihao \\
+        \texttt{A0187493M} & \texttt{A0189871J} & \texttt{A0170235N} & \texttt{A0187645N} & \texttt{A0180348A} \\
+    \end{tabular}
+}
+
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Project Responsibilities}
+\begin{itemize}[label={--}]
+    \item ER Diagram: Everyone
+    \item Teach how to use GitHub: Richard
+    \item Schema: Nikole
+    \item Triggers, Functions and Procedures: Tristan
+    \item Drafting/Drawing of Design of Webpage: Everyone
+    \item Creating of Design of Webpage:
+        \begin{itemize}
+            \item FlaskApp: Cheng Ling
+            \item HTML/CSS: Colin and Nikole
+            \item Chat Function: Richard
+        \end{itemize}
+    \item Creation of Fake Data for Testing: Richard
+    \item Testing/Debugging of Functions: Everyone
+    \item Report: Everyone
+    \item Video: Everyone
+\end{itemize}
+
+\section{Software Tools/Frameworks}
+\begin{itemize}[label={--}]
+    \item Heroku
+    \item Python \& Flask
+    \item PostgreSQL \& PL/pgSQL
+    \item HTML/CSS
+\end{itemize}
+
+\newpage
+\section{Application Data Requirements and Functionalities}
+\begin{itemize}
+    \item Admin
+    \begin{itemize}
+        \item Only the Admin can add new Full-Time Caretakers
+    \end{itemize}
+    
+    \item Pet Owner
+    \begin{itemize}
+        \item Pet Owners are able to view their pending and accepted bookings for the next 2 weeks on their homepage
+        \item Pet Owners are able to book Caretakers' service at most 2 weeks prior to the start date
+        \item Pet Owners are only able to book up to 2 weeks worth of care-taking services at a time
+        \item Pet Owners are able to give review of past completed transactions on their homepage
+        \item Pet Owners are able to view all of their transactions regardless of its status \newline (Completed/Pending/Accepted/Rejected)
+        \item Pet Owners are able to communicate with the Caretakers via the chat box upon confirmation of the booking
+    \end{itemize}
+    
+    \item Caretaker
+    \begin{itemize}
+        \item Caretakers are able to view their jobs for the next 2 weeks on their homepage
+        \item Caretakers are able to view all of their transactions regardless of its status \newline (Completed/Pending/Accepted/Rejected)
+        \item Caretakers are able to communicate with the Pet Owners via the chat box upon confirmation of booking
+        \item Full-Time Caretakers can only apply for leave minimally one month in advance of the date of leave.
+        \item Full-Time Caretakers can only apply for leave of that specific year.
+        \item Part-Time Caretakers' desired price for each pet type has to be higher or equal to the price set by Admin for Full-Time Caretakers
+        \item Caretakers are able to see the full breakdown of their salary for a particular month
+    \end{itemize}
+    
+    \item Interesting and Non-trivial Aspects
+    \begin{itemize}
+        \item Our group prompts users on the upcoming events for the next 2 weeks to keep them updated/reminded
+        \item Our group has a chat function to allow communication between both parties to liaise on drop-off/pick up of the pet.
+    \end{itemize}
+    
+\end{itemize}
+
+\newpage
+
+
+\section{Entity-Relationship Model}
+\begin{figure}[htp]
+    \centering
+    \includegraphics[width=15cm]{ER diagram.png}
+    \caption{ER Diagram}
+\end{figure}
+
+\begin{itemize}
+    \item Entity and relationship requirements
+    \begin{itemize}
+        \item The application can have many accounts, each storing their own user ID, password and deactivation status.
+	    \begin{itemize}
+	        \item An account can be uniquely identified by the user ID
+	        \item The deactivation status is `False' is the account is active, `True' if the account is deactivated
+	    \end{itemize}
+        \item An account can either be an Admin account or a normal user
+	    \begin{itemize}
+	        \item This hierarchy satisfies covering constraints
+	        \item This hierarchy does not satisfy overlapping constraints
+	    \end{itemize}
+		\item A normal user has a name, location (postal), address, H/P number and email.
+        \item A normal user can either be a Caretaker or a Pet Owner
+        \begin{itemize}
+	        \item This hierarchy satisfies covering constraints
+	        \item This hierarchy satisfies overlapping constraints
+	    \end{itemize}
+        \item A Pet Owner may have a credit card number saved for future payments.
+        \item A Pet Owner owns pets.
+        \item A pet has a birthday, name, special requests and a dead flag.
+        \begin{itemize}
+            \item A pet can be uniquely identified by its pet name and dead flag knowing the Pet Owner. (Weak entity - identity dependency) This means an owner cannot have two (live) pets with the same name.
+            \item The dead flag is 0 if the pet is still in the care of the Pet Owner. If the Pet Owner 'deletes' the pet, the dead flag will be set to 1, or incrementally higher integers if the Pet Owner had previously-deleted pets with the same name.
+        \end{itemize}
+        \item A pet is an instance of a pet type.
+        \item A pet type contains details about the particular pet type and also its daily base price (set by the Administrator)
+        \item A Caretaker may choose what kind of pets they can care for.
+        \begin{itemize}
+            \item A Part-Timer may have their own price set for the particular pet type.
+        \end{itemize}
+        % \item A Caretaker has past monthly salaries, of which the year, month and salary details are stored
+        % \begin{itemize}
+        %     \item The salaries can be uniquely identified by the year, month and the Caretaker's user ID. (Weak entity - identity dependency) (Can be derived with the main transaction table later, but created for caching purposes)
+        %     \item We are leaving this table out for now and it may never be implemented
+        % \end{itemize}
+        \item A Caretaker can either be a Part-Timer or a Full-Timer
+        \begin{itemize}
+            \item This hierarchy satisfies covering constraints
+            \item This hierarchy does not satisfy overlapping constraints
+        \end{itemize}
+        \item A Part-Timer can indicate his/her availability for a period, comprising of a start and end date (inclusive)
+        \item A Full-Timer can indicate his/her leave periods, comprising of a start and end date (inclusive)
+        \item A Caretaker may look after a pet for a particular period, this will be termed as a transaction 
+        \item A transaction has a status, transaction price
+        \begin{itemize}
+            \item The status can either be `Pending', `Rejected', `Accepted' or `Completed' depending on the state of the transaction
+        \end{itemize}
+        \item Each transaction can be accompanied by a series of chat messages which contains the time sent and the text message itself
+        \begin{itemize}
+            \item A chat message can be uniquely identified with the sender (an integer indicating if it's the Pet Owner, Caretaker or system), time and the transaction's key (Caretaker ID, Pet Owner ID, pet ID and time period) (Weak entity - identity dependency)
+        \end{itemize}
+    \end{itemize}
+    
+    \item Numerical Diagram-Enforceable Constraints
+    \begin{itemize}
+        \item Pet Owner - Pets
+        \begin{itemize}
+            \item A Pet Owner may own multiple pets
+            \item A pet must be owned by one owner
+        \end{itemize}
+        \item Pets - Pet type
+        \begin{itemize}
+            \item A pet must be classified under one pet type
+            \item A pet type classification may encompass many different pets
+        \end{itemize}
+        \item Caretaker - Pet type
+        \begin{itemize}
+            \item A Caretaker may care for various kinds of pet types
+            \item Many Caretakers may care for the same pet type
+        \end{itemize}
+        \item Part-Timer - Availabilities
+        \begin{itemize}
+            \item A Part-Timer may indicate availabilities for multiple periods
+            \item Many Part-Timers may indicate availabilities for the same period
+	    \end{itemize}
+        \item Full-Timer - Leave
+        \begin{itemize}
+            \item A Full-Timer may apply for leave for multiple periods
+            \item Many Full-Timers may apply for leave for the same period
+	    \end{itemize}
+        \item Looking after
+        \begin{itemize}
+            \item A Caretaker may look after many pets
+            \item Many Caretakers may look after the same pet
+        \end{itemize}
+    \end{itemize}
+    
+    \item Numerical diagram-nonenforceable constraints
+    \begin{itemize}
+        \item A Part-Timer's availability periods cannot overlap
+        \item A Full-Timer's leave periods cannot overlap
+        \item A Full-Timer cannot apply for leave if the 2*150 consecutive working days requirement cannot be fulfilled after the application of leave
+        \item A Caretaker cannot look after his/her own pet
+        \item A review/rating for a transaction can only be filled after the transaction is marked as `Completed'
+        \item A pet that is being looked after by the Caretaker must be classified as one of the pet types that the Caretaker can care for
+        \item Any two transactions that involve the same pet and do not have the status `Rejected' cannot clash in terms of dates.
+        \item The number of combined `Pending' and `Accepted' transactions for any Caretaker for any particular day cannot exceed 5 for a Full-Timer or highly rated Part-Timer, and cannot exceed 2 for a non-highly rated Part-Timer.
+        \item An `Accepted' or `Completed' transaction for a Caretaker must fall within his/her availabilities (if he/she is a Part-Timer) and must not fall within his/her leave periods (if he/she is a Full-Timer)
+    \end{itemize}
+    
+    \item Other assumptions
+    \begin{itemize}
+        \item The Admin will create a new account if he/she wishes to use the PCS
+        \item Part-time Caretakers cannot become Full-time Caretakers and vice versa, without creating a new account
+    \end{itemize}
+\end{itemize} %Constraints
+
+\newpage
+
+
+\section{Relational Schema}
+Below is the Relational Schema that our group is using for our project. 
+\newline
+\inputminted[breaklines, tabsize=8, obeytabs, fontsize=\footnotesize]{postgresql}{./codes/init_part1.sql}
+\newpage
+\inputminted[breaklines, tabsize=8, obeytabs, fontsize=\footnotesize]{postgresql}{./codes/init_part2.sql}
+
+Our group also has some constraints that are not enforced by the relational schema which are as follows:
+\begin{itemize}
+    \item We used a trigger to check that the price set by Part-Time Caretakers are at least as high as the price set by Admin for Full-Time Caretakers. This is to ensure that the Pet Owners would not solely only engage Part-Timers because they can set lower prices.
+    \item We also used triggers to ensure that the (150 days * 2) requirement needed for Full-Timers will be able to be fulfilled or has already been fulfilled before the leave is approved.
+    \item In the \texttt{PT\_Availability} table, we need to ensure that the the Caretaker is a Part-Timer and in \texttt{FT\_Leave} table, we need to ensure that the Caretaker is a Full-Timer
+    \item In the \texttt{Looking\_After} table, we use triggers to ensure that once a booking has been confirmed, all other pending bookings which overlap with the accepted booking will be rejected. 
+\end{itemize}
+
+
+\section{Database Normal Forms}
+The schema R is known to have a Boyce-Codd Normal Form (BCNF) with respect to its functional dependency F if \(\forall a \rightarrow A \in F^+\), one of the following properties is satisfied:
+\begin{itemize}
+    \item \(A \in a\) (where \(a \rightarrow A\) is trivial)
+    \item \(a \in \mathbb{S}_R(F)\) (where \(a\) is a superkey) 
+\end{itemize}
+In the process of designing our schema, all our tables have primary key(s) that uniquely identifies the rest of the rows in the schema. Since the primary keys are chosen minimal superkeys, all functional dependencies within our schema will satisfy the second condition where $a$ is a superkey. Using the method of decomposition into normal form that produces BCNF fragments, we can conclude our database is in BCNF.
+
+
+\section{Interesting Triggers}
+\subsection{Trigger 1: \texttt{trigger\_price\_check}}
+When the PCS Admin updates a new fixed price for Full-Timers for the various types of pets, the minimum price that a Part-Timer can charge will increase if the previous price would fall below this base price.
+\begin{figure}[H]
+\inputminted[breaklines, tabsize=8, obeytabs, fontsize=\footnotesize]{postgresql}{./codes/trigger_price_check.sql}
+\end{figure}
+
+\newpage
+\subsection{Trigger 2: \texttt{trigger\_ft\_leave\_check}}
+When the Full-Timers apply for leave, the requirement of (150 days * 2) must still be fulfilled, otherwise the leave application will be rejected. We also reject the leave application if it overlaps with an existing leave application for the same Full-Timer in the \texttt{FT\_Leave} table.
+\begin{figure}[H]
+\inputminted[breaklines, tabsize=8, obeytabs, fontsize=\footnotesize]{postgresql}{./codes/trigger_ft_leave_check.sql}
+\end{figure}
+
+\newpage
+\subsection{Trigger 3: \texttt{trigger\_pending\_check}}
+When the status of a booking has been changed to `Accepted', all other bookings for the pet will be cancelled if there are other bookings with an overlapping date.
+\begin{figure}[H]
+\inputminted[breaklines, tabsize=8, obeytabs, fontsize=\footnotesize]{postgresql}{./codes/trigger_pending_check.sql}
+\end{figure}
+
+
+\section{Complex Queries}
+
+\subsection{Query 1: \texttt{bid\_search}}
+\begin{figure}[H]
+\inputminted[breaklines, tabsize=8, obeytabs, fontsize=\footnotesize]{postgresql}{./codes/query_bid_search.sql}
+\end{figure}
+
+The \texttt{bid\_search} function searches for the Caretaker IDs that fits the criterion set by the Pet Owner based on start date and end date for their particular pet. \\
+
+Explanation: We first select Part-Time Caretakers who can care for that pet type and are available from start date to end date. We also ensure they currently either have less than 2 pending/accepted transactions or less than 5 pending/accepted transactions with an average rating of more than 4. We do the same for Full-Time caretakers, less the rating caveat, then combine them to display all available Caretakers for the conditions given.
+
+\subsection{Query 2: \texttt{total\_pet\_day\_mnth}}
+\begin{figure}[H]
+\inputminted[breaklines, tabsize=8, obeytabs, fontsize=\footnotesize]{postgresql}{./codes/query_total_pet_day_mnth.sql}
+\end{figure}
+
+The \texttt{total\_pet\_day\_mnth} function in Figure 3 finds the number of pet-days for the particular Caretaker during a specified month and year. This is necessary in order to calculate salary for full-time caretakers, who receive \$3000/month for up to 60 pet-days, and 80\% of their price as bonus for excess pet-days. \\
+
+Explanation: We split our problem into 3 parts that we sum to obtain the return value. For each part, we only look at Completed transactions in \texttt{Looking\_After}. First, we consider Completed transactions which occur completely within the month being queried for. Second, we consider Completed transactions which start before, but end during, the month being queried for. Last, we consider Completed transactions which start during, but end after, the month being queried for. Summing the pet-days calculated in each of these three situations will return the total number of pet days in a given month, regardless of differing month periods of each Completed entry.
+
+\subsection{Query 3: \texttt{total\_trans\_pr\_mnth}}
+\begin{figure}[H]
+\inputminted[breaklines, tabsize=8, obeytabs, fontsize=\footnotesize]{postgresql}{./codes/query_total_trans_pr_mnth.sql}
+\end{figure}
+
+The \texttt{total\_trans\_pr\_mnth} function takes in a user-ID of a Caretaker, the month and the year we are interested in and outputs the total price of the transactions handled by the Caretaker in that month. \\
+
+Explanation: Similarly to the previous query, the calculation is also split into three parts for transactions that occur completely within the month, transactions that started before the month and transactions that end after the month. Some interpolation for obtaining the transaction price for the latter two cases were needed as the spillover of the transaction price into the following months had to be adjusted for.
+
+% \subsection{Query 3: \texttt{trans\_this\_mnth}}
+% \begin{figure}[H]
+% \inputminted[breaklines, tabsize=8, obeytabs, fontsize=\footnotesize]{postgresql}{./codes/query_trans_this_mnth.sql}
+% \end{figure}
+
+% The \texttt{trans\_this\_mnth} function takes in a user-ID of a Caretaker, the month and the year we are interested in and output the transactions of this Caretaker with the details of Pet Owner, Pet name, start date, end date, rate (Price per day) and transaction price. \\
+
+% Explanation: \texttt{firstday} and \texttt{lastday} are temporary variables created for the ease of comparison and refer to the first and last day of the month respectively. Most of the output is already stored in \texttt{Looking\_After}, it is only a matter of calling it directly via a SELECT query. \texttt{rate} is a derived attribute which has to be calculated from the transaction price divided by the length of the transaction. The WHERE clause made use of \texttt{firstday} and \texttt{lastday} to exclude transactions outside this month.
+
+\newpage
+
+
+\section{Application Interface}
+Below consists of several screenshots of our application.
+\begin{figure}[htp]
+    \centering
+    \includegraphics[width=15cm]{Sample SS3.png}
+    \caption{Screenshot of Application Profile Page}
+\end{figure} 
+\begin{figure}[htp]
+    \centering
+    \includegraphics[width=15cm]{Sample SS2.png}
+    \caption{Screenshot of Application Search Result}
+\end{figure} 
+\begin{figure}[htp]
+    \centering
+    \includegraphics[width=15cm]{Sample SS1.png}
+    \caption{Screenshot of Application Confirmation Screen}
+\end{figure} 
+
+\newpage
+
+
+\section{Summary of Project}
+    \begin{itemize}
+        \item Difficulties Faced
+        \begin{itemize}
+            \item Had to experience a steep learning curve when creating the web application since no one had prior of web-design knowledge of FlaskApp, HTML and CSS.
+            \item Linking between front-end and back-end  
+            \item Not being able to use serial types was inconvenient
+        \end{itemize}
+        \item Lessons Learnt
+        \begin{itemize}
+            \item We have learnt how databases can aid an application by serving data to its back-end
+            \item Importance of Database Normal Forms to ensure good structure and integrity of the way we store our data
+            % \item We now understand why website designers on Fiverr have not gone out of business yet
+        \end{itemize}
+    \end{itemize}
+\end{document}
