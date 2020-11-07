@@ -22,11 +22,11 @@ RETURNS INTEGER AS
 $func$
 DECLARE acc_type INTEGER = 0;
 BEGIN
-  IF (SELECT EXISTS(SELECT 1 FROM Pet_Owner po WHERE po.po_userid = user_type.userid)) THEN acc_type = acc_type + 1;
+  IF EXISTS(SELECT 1 FROM Pet_Owner po WHERE po.po_userid = user_type.userid) THEN acc_type = acc_type + 1;
   END IF; -- +1 if PO
-  IF (SELECT EXISTS(SELECT 1 FROM PT_validpet pt WHERE pt.ct_userid = user_type.userid)) THEN acc_type = acc_type + 2;
+  IF EXISTS(SELECT 1 FROM PT_validpet pt WHERE pt.ct_userid = user_type.userid) THEN acc_type = acc_type + 2;
   END IF; -- +2 if CTPT
-  IF (SELECT EXISTS(SELECT 1 FROM FT_validpet ft WHERE ft.ct_userid = user_type.userid)) THEN acc_type = acc_type + 4;
+  IF EXISTS(SELECT 1 FROM FT_validpet ft WHERE ft.ct_userid = user_type.userid) THEN acc_type = acc_type + 4;
   END IF; -- +4 if CTFT
   RETURN(acc_type);
 END;
@@ -181,7 +181,7 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION explode_date (sd DATE, ed DATE)
 --takes in start date, end date. outputs every single day, with each caretaker booked on that day and what pet they looking after
 --get the count of pets by doing groupby day, user.
---for use in bidsearch function when checking # of pets booked for each caretaker
+--for use in bid_search function when checking # of pets booked for each caretaker
 RETURNS TABLE (ctuser VARCHAR, pouser VARCHAR, petname VARCHAR, day DATE) AS
 $func$
 DECLARE
@@ -237,8 +237,7 @@ $func$
 LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION bidDetails (userid VARCHAR) 
---Bidsearchuserid and bidDetails are used for page
---6 output. so pg 6 will be sth like bidDetails(bidsearchuserid(petname, sd, ed))
+--bid_search and bidDetails are used for page 6 output. so pg 6 will be sth like bidDetails(bidsearchuserid(petname, sd, ed))
 --TODO FIX PRICE!!! Esp for pt
 RETURNS TABLE (name VARCHAR, avgrating FLOAT, price FLOAT) AS
 $func$
@@ -299,8 +298,14 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE applyBooking (pouid VARCHAR, petname VARCHAR, ctuid VARCHAR, sd DATE, ed DATE, price FLOAT, payment_op VARCHAR) AS
 $func$
 BEGIN
-  INSERT INTO Looking_After (po_userid, ct_userid, pet_name, start_date, end_date, trans_pr, payment_op)
-  VALUES (applyBooking.pouid, applyBooking.ctuid, applyBooking.petname, applyBooking.sd, applyBooking.ed, applyBooking.price, applyBooking.payment_op);
+  IF SELECT ct.full_time FROM Caretaker ct WHERE ct.ct_userid = applyBooking.ctuid THEN
+    INSERT INTO Looking_After (po_userid, ct_userid, pet_name, start_date, end_date, status, trans_pr, payment_op)
+    VALUES (applyBooking.pouid, applyBooking.ctuid, applyBooking.petname, applyBooking.sd, applyBooking.ed, 'Accepted', applyBooking.price, applyBooking.payment_op);
+  ELSE
+    INSERT INTO Looking_After (po_userid, ct_userid, pet_name, start_date, end_date, status, trans_pr, payment_op)
+    VALUES (applyBooking.pouid, applyBooking.ctuid, applyBooking.petname, applyBooking.sd, applyBooking.ed, 'Pending', applyBooking.price, applyBooking.payment_op);
+  END IF;
+  
 END;
 $func$
 LANGUAGE plpgsql;
@@ -510,30 +515,6 @@ $func$
 LANGUAGE plpgsql;
 
 
--- fulltime gets 3k for up to 60 petdays. excess pet days, 80% of price as bonus
--- pt 75% as payment
-CREATE OR REPLACE FUNCTION what_salary(userid VARCHAR, dur DATE)
-RETURNS FLOAT4 AS
-$func$
-DECLARE
-  earnings FLOAT;
-BEGIN
-  earnings = total_trans_pr_mnth (userid, EXTRACT(YEAR FROM dur), EXTRACT(MONTH FROM dur));
-  IF (SELECT full_time FROM Caretaker ct WHERE ct.ct_userid = userid) THEN
-    IF total_pet_day_mnth (userid, EXTRACT(YEAR FROM dur), EXTRACT(MONTH FROM dur)) <= 60 THEN
-      RETURN 3000;
-    ELSE
-      RETURN 3000 + (earnings - 3000) * 0.8;
-    END IF;
-  ELSE --parttime
-    RETURN earnings * 0.75;
-  END IF;
-END;
-$func$
-LANGUAGE plpgsql;
-  
-
-
 CREATE OR REPLACE FUNCTION total_trans_pr_mnth(userid VARCHAR, year INT, month INT)
 RETURNS FLOAT4 AS
 $func$
@@ -563,6 +544,31 @@ BEGIN
 END;
 $func$
 LANGUAGE plpgsql;
+
+
+-- fulltime gets 3k for up to 60 petdays. excess pet days, 80% of price as bonus
+-- pt 75% as payment
+CREATE OR REPLACE FUNCTION what_salary(userid VARCHAR, dur DATE)
+RETURNS FLOAT4 AS
+$func$
+DECLARE
+  earnings FLOAT;
+BEGIN
+  earnings = total_trans_pr_mnth (userid, EXTRACT(YEAR FROM dur), EXTRACT(MONTH FROM dur));
+  IF (SELECT full_time FROM Caretaker ct WHERE ct.ct_userid = userid) THEN
+    IF total_pet_day_mnth (userid, EXTRACT(YEAR FROM dur), EXTRACT(MONTH FROM dur)) <= 60 THEN
+      RETURN 3000;
+    ELSE
+      RETURN 3000 + (earnings - 3000) * 0.8;
+    END IF;
+  ELSE --parttime
+    RETURN earnings * 0.75;
+  END IF;
+END;
+$func$
+LANGUAGE plpgsql;
+
+
 
 CREATE OR REPLACE FUNCTION trans_this_month(userid VARCHAR, year INT, month INT)
 RETURNS TABLE (po_userid VARCHAR, pet_name VARCHAR, start_date DATE, end_date DATE, rate FLOAT, trans_pr REAL) AS
@@ -697,3 +703,29 @@ DROP TRIGGER IF EXISTS cancel_pending_bids ON Looking_After;
 
 CREATE TRIGGER cancel_pending_bids AFTER UPDATE OR INSERT ON Looking_After
 FOR EACH ROW EXECUTE PROCEDURE trigger_pending_check();
+
+
+
+CREATE OR REPLACE FUNCTION trigger_pt_avail_overlap_check()
+RETURNS TRIGGER AS
+$$ BEGIN
+  IF EXISTS(SELECT 1 FROM PT_Availability pta WHERE NEW.userid = pta.userid AND NEW.sd >= pta.sd AND NEW.ed =< pta.ed) THEN
+    RAISE EXCEPTION 'Error applying availability: You previously already indicated availability in this period';
+  END IF;
+  
+  IF EXISTS(SELECT 1 FROM PT_Availability pta WHERE NEW.userid = pta.userid AND
+  ( ( (NEW.sd BETWEEN pta.sd AND pta.ed) AND NEW.sd > pta.ed )
+  OR ( (NEW.ed BETWEEN pta.sd AND pta.ed) AND NEW.sd < pta.sd ) ) ) THEN
+    RAISE EXCEPTION 'Error applying availability: Overlaps with a previously applied availability';
+  END IF;
+  
+  DELETE FROM PT_Availability WHERE NEW.userid = pta.userid AND NEW.sd <= pta.sd AND NEW.ed >= pta.ed; --Delete smaller availability interval
+  RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS overwrite_overlapping_avail ON PT_Availability;
+
+CREATE TRIGGER overwrite_overlapping_avail BEFORE UPDATE OR INSERT ON PT_Availability
+FOR EACH ROW EXECUTE PROCEDURE trigger_pt_avail_overlap_check();
