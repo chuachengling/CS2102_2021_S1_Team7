@@ -228,7 +228,7 @@ BEGIN
   EXCEPT(--Remove FT caretakers who have 5 pets at any day in this date range
   SELECT exp2.ctuser FROM explode_date(sd, ed) exp2
   GROUP BY exp2.ctuser, exp2.day
-  HAVING COUNT(*) = 5
+  HAVING COUNT(*) >= 5
   ))
   )
 ;
