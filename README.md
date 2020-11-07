@@ -4,11 +4,7 @@ Static FlaskApp is deployed and updated. To run, clone the git and open terminal
 
 Preliminary constraints and ER diagrams can be found in the 'erd' branch of the repo
 
-<<<<<<< Updated upstream
-test 
+The project report can be found in the 'report' branch of the repo
 
 We're working on the website frontend right now.
 
-=======
-We're working on the website frontend right now.
->>>>>>> Stashed changes
