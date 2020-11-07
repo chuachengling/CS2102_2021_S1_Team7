@@ -71,33 +71,33 @@
 \begin{itemize}
     \item Admin
     \begin{itemize}
-        \item Only the Admin can add new Full-Time Caretakers
+        \item Only the Admin can add new Full-Time Caretakers.
     \end{itemize}
     
     \item Pet Owner
     \begin{itemize}
-        \item Pet Owners are able to view their pending and accepted bookings for the next 2 weeks on their homepage
-        \item Pet Owners are able to book Caretakers' service at most 2 weeks prior to the start date
-        \item Pet Owners are only able to book up to 2 weeks worth of care-taking services at a time
-        \item Pet Owners are able to give review of past completed transactions on their homepage
-        \item Pet Owners are able to view all of their transactions regardless of its status \newline (Completed/Pending/Accepted/Rejected)
-        \item Pet Owners are able to communicate with the Caretakers via the chat box upon confirmation of the booking
+        \item Pet Owners are able to view their pending and accepted bookings for the next 2 weeks on their homepage.
+        \item Pet Owners are able to book Caretakers' service at most 2 weeks prior to the start date.
+        \item Pet Owners are only able to book up to 2 weeks worth of care-taking services at a time.
+        \item Pet Owners are able to give review of past completed transactions on their homepage.
+        \item Pet Owners are able to view all of their transactions regardless of its status \newline (Completed/Pending/Accepted/Rejected).
+        \item Pet Owners are able to communicate with the Caretakers via the chat box upon confirmation of the booking.
     \end{itemize}
     
     \item Caretaker
     \begin{itemize}
-        \item Caretakers are able to view their jobs for the next 2 weeks on their homepage
-        \item Caretakers are able to view all of their transactions regardless of its status \newline (Completed/Pending/Accepted/Rejected)
-        \item Caretakers are able to communicate with the Pet Owners via the chat box upon confirmation of booking
+        \item Caretakers are able to view their jobs for the next 2 weeks on their homepage.
+        \item Caretakers are able to view all of their transactions regardless of its status \newline (Completed/Pending/Accepted/Rejected).
+        \item Caretakers are able to communicate with the Pet Owners via the chat box upon confirmation of booking.
         \item Full-Time Caretakers can only apply for leave minimally one month in advance of the date of leave.
         \item Full-Time Caretakers can only apply for leave of that specific year.
-        \item Part-Time Caretakers' desired price for each pet type has to be higher or equal to the price set by Admin for Full-Time Caretakers
-        \item Caretakers are able to see the full breakdown of their salary for a particular month
+        \item Part-Time Caretakers' desired price for each pet type has to be higher or equal to the price set by Admin for Full-Time Caretakers.
+        \item Caretakers are able to see the full breakdown of their salary for a particular month.
     \end{itemize}
     
     \item Interesting and Non-trivial Aspects
     \begin{itemize}
-        \item Our group prompts users on the upcoming events for the next 2 weeks to keep them updated/reminded
+        \item Our group prompts users on the upcoming events for the next 2 weeks to keep them updated/reminded.
         \item Our group has a chat function to allow communication between both parties to liaise on drop-off/pick up of the pet.
     \end{itemize}
     
@@ -118,19 +118,19 @@
     \begin{itemize}
         \item The application can have many accounts, each storing their own user ID, password and deactivation status.
 	    \begin{itemize}
-	        \item An account can be uniquely identified by the user ID
-	        \item The deactivation status is `False' is the account is active, `True' if the account is deactivated
+	        \item An account can be uniquely identified by the user ID.
+	        \item The deactivation status is `False' is the account is active, `True' if the account is deactivated.
 	    \end{itemize}
-        \item An account can either be an Admin account or a normal user
+        \item An account can either be an Admin account or a normal user.
 	    \begin{itemize}
-	        \item This hierarchy satisfies covering constraints
-	        \item This hierarchy does not satisfy overlapping constraints
+	        \item This hierarchy satisfies covering constraints.
+	        \item This hierarchy does not satisfy overlapping constraints.
 	    \end{itemize}
 		\item A normal user has a name, location (postal), address, H/P number and email.
-        \item A normal user can either be a Caretaker or a Pet Owner
+        \item A normal user can either be a Caretaker or a Pet Owner.
         \begin{itemize}
-	        \item This hierarchy satisfies covering constraints
-	        \item This hierarchy satisfies overlapping constraints
+	        \item This hierarchy satisfies covering constraints.
+	        \item This hierarchy satisfies overlapping constraints.
 	    \end{itemize}
         \item A Pet Owner may have a credit card number saved for future payments.
         \item A Pet Owner owns pets.
@@ -140,7 +140,7 @@
             \item The dead flag is 0 if the pet is still in the care of the Pet Owner. If the Pet Owner `deletes' the pet, the dead flag will be set to 1, or incrementally higher integers if the Pet Owner had previously-deleted pets with the same name.
         \end{itemize}
         \item A pet is an instance of a pet type.
-        \item A pet type contains details about the particular pet type and also its daily base price (set by the Administrator)
+        \item A pet type contains details about the particular pet type and also its daily base price (set by the Administrator).
         \item A Caretaker may choose what kind of pets they can care for.
         \begin{itemize}
             \item A Part-Timer may have their own price set for the particular pet type.
@@ -150,19 +150,19 @@
         %     \item The salaries can be uniquely identified by the year, month and the Caretaker's user ID. (Weak entity - identity dependency) (Can be derived with the main transaction table later, but created for caching purposes)
         %     \item We are leaving this table out for now and it may never be implemented
         % \end{itemize}
-        \item A Caretaker can either be a Part-Timer or a Full-Timer
+        \item A Caretaker can either be a Part-Timer or a Full-Timer.
         \begin{itemize}
-            \item This hierarchy satisfies covering constraints
-            \item This hierarchy does not satisfy overlapping constraints
+            \item This hierarchy satisfies covering constraints.
+            \item This hierarchy does not satisfy overlapping constraints.
         \end{itemize}
-        \item A Part-Timer can indicate his/her availability for a period, comprising of a start and end date (inclusive)
-        \item A Full-Timer can indicate his/her leave periods, comprising of a start and end date (inclusive)
-        \item A Caretaker may look after a pet for a particular period, this will be termed as a transaction 
-        \item A transaction has a status, transaction price
+        \item A Part-Timer can indicate his/her availability for a period, comprising of a start and end date (inclusive).
+        \item A Full-Timer can indicate his/her leave periods, comprising of a start and end date (inclusive).
+        \item A Caretaker may look after a pet for a particular period, this will be termed as a transaction.
+        \item A transaction has a status, transaction price.
         \begin{itemize}
-            \item The status can either be `Pending', `Rejected', `Accepted' or `Completed' depending on the state of the transaction
+            \item The status can either be `Pending', `Rejected', `Accepted' or `Completed' depending on the state of the transaction.
         \end{itemize}
-        \item Each transaction can be accompanied by a series of chat messages which contains the time sent and the text message itself
+        \item Each transaction can be accompanied by a series of chat messages which contains the time sent and the text message itself.
         \begin{itemize}
             \item A chat message can be uniquely identified with the sender (an integer indicating if it's the Pet Owner, Caretaker or system), time and the transaction's key (Caretaker ID, Pet Owner ID, Pet Name, dead flag and time period) (Weak entity - identity dependency).
         \end{itemize}
@@ -217,8 +217,8 @@
     
     \item Other assumptions
     \begin{itemize}
-        \item The Admin will create a new account if he/she wishes to use the PCS
-        \item Part-time Caretakers cannot become Full-time Caretakers and vice versa, without creating a new account
+        \item The Admin will create a new account if he/she wishes to use the PCS.
+        \item Part-time Caretakers cannot become Full-time Caretakers and vice versa, without creating a new account.
     \end{itemize}
 \end{itemize} %Constraints
 
@@ -236,7 +236,7 @@ Our group also has some constraints that are not enforced by the relational sche
 \begin{itemize}
     \item We used a trigger to check that the price set by Part-Time Caretakers are at least as high as the price set by Admin for Full-Time Caretakers. This is to ensure that the Pet Owners would not solely only engage Part-Timers because they can set lower prices.
     \item We also used triggers to ensure that the (150 days * 2) requirement needed for Full-Timers will be able to be fulfilled or has already been fulfilled before the leave is approved.
-    \item In the \texttt{PT\_Availability} table, we need to ensure that the the Caretaker is a Part-Timer and in \texttt{FT\_Leave} table, we need to ensure that the Caretaker is a Full-Timer
+    \item In the \texttt{PT\_Availability} table, we need to ensure that the the Caretaker is a Part-Timer and in \texttt{FT\_Leave} table, we need to ensure that the Caretaker is a Full-Timer.
     \item In the \texttt{Looking\_After} table, we use triggers to ensure that once a booking has been confirmed, all other pending bookings under the same Caretaker which overlap with the accepted booking will be rejected. 
 \end{itemize}
 
@@ -266,7 +266,7 @@ When the Full-Timers apply for leave, the requirement of (150 days * 2) must sti
 
 \newpage
 \subsection{Trigger 3: \texttt{trigger\_pending\_check}}
-When the status of a booking has been updated or inserted as `Accepted', all other pending bookings for the pet in this booking will be cancelled if they overlap dates with the 'Accepted' booking.
+When the status of a booking has been updated or inserted as `Accepted', all other pending bookings for the pet in this booking will be cancelled if they overlap dates with the `Accepted' booking.
 \begin{figure}[H]
 \inputminted[breaklines, tabsize=8, obeytabs, fontsize=\footnotesize]{postgresql}{./codes/trigger_pending_check.sql}
 \end{figure}
@@ -281,16 +281,16 @@ When the status of a booking has been updated or inserted as `Accepted', all oth
 
 The \texttt{bid\_search} function searches for the Caretaker IDs that fits the criterion set by the Pet Owner based on start date and end date for their particular pet. \\
 
-Explanation: We first select Part-Time Caretakers who can care for that pet type and are available from start date to end date. We also ensure they currently either have less than 2 pending/accepted transactions or less than 5 pending/accepted transactions with an average rating of more than 4. We do the same for Full-Time caretakers, less the rating caveat, then combine them to display all available Caretakers for the conditions given.
+Explanation: We first select Part-Time Caretakers who can care for that pet type and are available from start date to end date. We also ensure they currently either have less than 2 pending/accepted transactions, or less than 5 pending/accepted transactions but with an average rating of more than 4. We do the same for Full-Time caretakers, less the rating caveat, then combine them to display all available Caretakers for the conditions given.
 
 \subsection{Query 2: \texttt{total\_pet\_day\_mnth}}
 \begin{figure}[H]
 \inputminted[breaklines, tabsize=8, obeytabs, fontsize=\footnotesize]{postgresql}{./codes/query_total_pet_day_mnth.sql}
 \end{figure}
 
-The \texttt{total\_pet\_day\_mnth} function in Figure 3 finds the number of pet-days for the particular Caretaker during a specified month and year. This is necessary in order to calculate salary for full-time caretakers, who receive \$3000/month for up to 60 pet-days, and 80\% of their price as bonus for excess pet-days. \\
+The \texttt{total\_pet\_day\_mnth} function finds the number of pet-days for the particular Caretaker during a specified month and year. This is necessary in order to calculate salary for full-time caretakers, who receive \$3000/month for up to 60 pet-days, and 80\% of their price as bonus for excess pet-days. \\
 
-Explanation: We split our problem into 3 parts that we sum to obtain the return value. For each part, we only look at Completed transactions in \texttt{Looking\_After}. First, we consider Completed transactions which occur completely within the month being queried for. Second, we consider Completed transactions which start before, but end during, the month being queried for. Last, we consider Completed transactions which start during, but end after, the month being queried for. Summing the pet-days calculated in each of these three situations will return the total number of pet days in a given month, regardless of differing month periods of each Completed entry.
+Explanation: We split our problem into 3 parts that we sum to obtain the return value. For each part, we only look at Completed transactions in \texttt{Looking\_After}. First, we consider Completed transactions which occur completely within the month being queried for. Second, we consider Completed transactions which start before, but end during, the month being queried for. Last, we consider Completed transactions which start during, but end after, the month being queried for. Summing the pet-days calculated in each of these three situations will return the total number of pet days in a given month, regardless of differing date periods of each Completed entry.
 
 \subsection{Query 3: \texttt{total\_trans\_pr\_mnth}}
 \begin{figure}[H]
