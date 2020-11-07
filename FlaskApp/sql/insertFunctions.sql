@@ -1,3 +1,6 @@
+--TODO: Caretaker cannot look after his/her own pet. implement as Trigger?
+-- Edit functions for writereview/rating: can only be done after transaction is completed
+-- fn to find trans_pr, for use in applyBooking
 
 -- Page 1
 CREATE OR REPLACE FUNCTION login(username VARCHAR, pw VARCHAR)
@@ -80,10 +83,10 @@ $func$
 LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE PROCEDURE deletePTPetsICanCare(userid VARCHAR, pettype VARCHAR, price FLOAT) AS
+CREATE OR REPLACE PROCEDURE deletePTPetsICanCare(userid VARCHAR, pettype VARCHAR) AS
 $func$ --call different function in python depending on pt/ft
 BEGIN
-  DELETE FROM PT_validpet WHERE PT_validpet.ct_userid = deletePTPetsICanCare.userid AND PT_validpet.pet_type = deletePTPetsICanCare.pettype AND PT_validpet.price = deletePTPetsICanCare.price;
+  DELETE FROM PT_validpet WHERE PT_validpet.ct_userid = deletePTPetsICanCare.userid AND PT_validpet.pet_type = deletePTPetsICanCare.pettype;
 END;
 $func$
 LANGUAGE plpgsql;
