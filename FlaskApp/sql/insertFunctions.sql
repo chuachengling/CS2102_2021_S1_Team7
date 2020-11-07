@@ -616,48 +616,34 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION trigger_ft_leave_check()
 RETURNS TRIGGER AS
 $$ BEGIN
-  DROP TABLE IF EXISTS year_start_end;
   DROP TABLE IF EXISTS leave_records;
   DROP TABLE IF EXISTS days_avail;
-  --TEMP TABLE is to allow correct calculation
-  CREATE TEMPORARY TABLE year_start_end(
-  leave_sd DATE,
-  leave_ed DATE
-  );
-  INSERT INTO year_start_end VALUES (CAST(CONCAT(CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS VARCHAR),'-01-01') AS DATE), CAST(CONCAT(CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS VARCHAR),'-01-01') AS DATE));
-  INSERT INTO year_start_end VALUES (CAST(CONCAT(CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS VARCHAR),'-12-31') AS DATE), CAST(CONCAT(CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS VARCHAR),'-12-31') AS DATE));
   
   CREATE TEMPORARY TABLE leave_records AS
-  ((SELECT ftl.leave_sd, ftl.leave_ed FROM FT_Leave ftl WHERE NEW.ct_userid = ftl.ct_userid)
-  UNION
-  (SELECT * FROM year_start_end)); --has all leave records for the user being inserted
-  
---  SET TRBLSHOOT = SELECT COUNT(*) FROM leave_records;
---  RAISE NOTICE 'NUM OF RECORDS %',TRBLSHOOT;
+  (SELECT ftl.leave_sd, ftl.leave_ed FROM FT_Leave ftl WHERE NEW.ct_userid = ftl.ct_userid); -- Has all leave records for the user being inserted
 
   IF (SELECT EXISTS(SELECT 1 FROM leave_records lr2 WHERE NEW.leave_sd BETWEEN SYMMETRIC lr2.leave_ed AND lr2.leave_sd))
   OR (SELECT EXISTS(SELECT 1 FROM leave_records lr2 WHERE NEW.leave_ed BETWEEN SYMMETRIC lr2.leave_ed AND lr2.leave_sd)) THEN
     RAISE EXCEPTION 'You are already on leave';
-  END IF;
+  END IF; -- Disallow leave application if caretaker would already be on leave
   
-  INSERT INTO leave_records VALUES (NEW.leave_sd, NEW.leave_ed);
+  INSERT INTO leave_records VALUES (NEW.leave_sd, NEW.leave_ed); -- Adding the newly-applied-for leave into leave_records
+  
+  INSERT INTO leave_records VALUES (CAST(CONCAT(CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS VARCHAR),'-01-01') AS DATE), CAST(CONCAT(CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS VARCHAR),'-01-01') AS DATE));
+  INSERT INTO leave_records VALUES (CAST(CONCAT(CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS VARCHAR),'-12-31') AS DATE), CAST(CONCAT(CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS VARCHAR),'-12-31') AS DATE));
+  
   
   CREATE TEMPORARY TABLE days_avail AS
   SELECT LEAD(lr.leave_sd,1) OVER (ORDER BY leave_sd ASC) - lr.leave_ed AS diff
   FROM leave_records lr
   WHERE EXTRACT(YEAR FROM CURRENT_DATE) = EXTRACT(YEAR FROM lr.leave_sd)
-  ORDER BY lr.leave_sd ASC;
+  ORDER BY lr.leave_sd ASC; -- Calculates days between consecutive leaves, including number of days since start of year/to end of year, and the leave about to be inserted
 
-  --RAISE NOTICE '%', days_avail.diff;
-  
-  
-  IF NOT (((SELECT COUNT(*) FROM days_avail WHERE diff >= 150) = 2) OR ((SELECT COUNT(*) FROM days_avail WHERE diff >= 300) = 1)) THEN
+
+  IF NOT ( ((SELECT COUNT(*) FROM days_avail WHERE diff >= 150) = 2) OR ((SELECT COUNT(*) FROM days_avail WHERE diff >= 300) = 1) ) THEN
     RAISE EXCEPTION 'You must work 2x150 days a year';
-  END IF;
+  END IF; -- If the inserted leave results in the constraint of 2x150 days working being unfulfilled, raise exception, which interrupts the insert
   
-  DROP TABLE year_start_end;
-  DROP TABLE leave_records;
-  DROP TABLE days_avail;
   RETURN NEW;
 END;
 $$
@@ -671,20 +657,20 @@ FOR EACH ROW EXECUTE PROCEDURE trigger_ft_leave_check();
 
 
 
-CREATE OR REPLACE FUNCTION trigger_price_check() --Raises PT prices, if admin increases base price
+CREATE OR REPLACE FUNCTION trigger_price_check()
 RETURNS TRIGGER AS
 $$ DECLARE
     baseprice FLOAT4;
 BEGIN
-  baseprice = (SELECT price FROM Pet_Type WHERE pet_type = NEW.pet_type);
+  baseprice = (SELECT price FROM Pet_Type WHERE pet_type = NEW.pet_type); -- Stores the new prices for each pet type that was updated
   
   UPDATE PT_validpet
   SET price = baseprice
   WHERE (PT_validpet.ct_userid, PT_validpet.pet_type) IN(
   SELECT pt.ct_userid,pt.pet_type FROM PT_validpet pt INNER JOIN Pet_Type base ON pt.pet_type = base.pet_type
-  WHERE pt.price < base.price);
+  WHERE pt.price < base.price);  -- Increase prices set by Parttime Caretakers if they would fall below this new price
 
-  RETURN NULL; --Doesn't matter, but just for clarity.
+  RETURN NULL;
 END;
 $$
 LANGUAGE plpgsql;
@@ -698,14 +684,15 @@ FOR EACH ROW EXECUTE PROCEDURE trigger_price_check();
 CREATE OR REPLACE FUNCTION trigger_pending_check()
 RETURNS TRIGGER AS
 $$ BEGIN
+-- Reject all other pending bids in an overlapping period, if an 'Accepted' status is updated/inserted for a specific pet
+  END IF;
   IF NEW.status = 'Accepted' THEN
     UPDATE Looking_After la
     SET status = 'Rejected'
     WHERE la.po_userid = NEW.po_userid AND la.pet_name = NEW.pet_name AND la.status = 'Pending'
     AND NOT (la.start_date < NEW.start_date AND la.end_date < NEW.start_date)
     AND NOT (la.start_date > NEW.end_date AND la.end_date > NEW.end_date);
-  END IF;
-  RETURN NULL; --Doesn't matter, but just for clarity.
+  RETURN NULL;
 END;
 $$
 LANGUAGE plpgsql;
