@@ -128,11 +128,10 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE editPOpets(userid VARCHAR, petname VARCHAR, bday DATE, specreq VARCHAR, pettype VARCHAR, dieded INTEGER) AS
 $func$ 
 -- dead = 1 if have change. Need to check if it works, especially if you change name + update dead at same time
--- dieded value should be 0 or 1. Too lazy to change this to boolean sry
--- deletepet will be done by this too. Or should we split?
+-- dieded value should be 0 or 1.
 BEGIN
   UPDATE Pet
-  SET pet_name = petname, birthday = CAST(bday as DATE), spec_req = specreq, pet_type = pettype, dead =
+  SET pet_name = petname, birthday = bday, spec_req = specreq, pet_type = pettype, dead =
     (SELECT dieded * (max(pa.dead) + dieded) FROM Pet pa WHERE pa.po_userid = userid AND pa.pet_name = petname)
   WHERE po_userid = userid AND pet_name = petname AND dead = 0;
 END;
@@ -188,6 +187,7 @@ $func$
 DECLARE
   runDT DATE;
 BEGIN
+  DROP TABLE IF EXISTS exploded_table;
   runDT = sd;
   CREATE TEMP TABLE exploded_table(ctuser VARCHAR, pouser VARCHAR, petname VARCHAR, dateday DATE) ON COMMIT DROP;
   WHILE runDT <= ed LOOP
@@ -210,22 +210,22 @@ BEGIN
   RETURN QUERY(
   ((
   SELECT pt.ct_userid FROM PT_validpet pt WHERE pt.pet_type IN ( -- PTCT who can care for this pettype
-    SELECT p.pet_type FROM Pet p WHERE p.pet_name = bid_search.petname)
+    SELECT p.pet_type FROM Pet p WHERE p.pet_name = bid_search.petname AND p.dead = 0)
   )INTERSECT(
-  SELECT PT_Availability.ct_userid FROM PT_Availability -- Available PTCT
+  SELECT PT_Availability.ct_userid FROM PT_Availability -- Check for available PTCT
   WHERE bid_search.sd >= PT_Availability.avail_sd AND bid_search.ed <= PT_Availability.avail_ed
-  )EXCEPT(SELECT exp.ctuser FROM explode_date(sd, ed) exp -- REMOVE from available PTCT those who are fully booked
+  )EXCEPT(SELECT exp.ctuser FROM explode_date(sd, ed) exp -- REMOVE PTCT who are fully booked
   GROUP BY exp.ctuser, exp.day
-  HAVING COUNT(*) >= CASE --define 4 as good rating
-                      WHEN (SELECT avg(la.rating) FROM Looking_After la WHERE la.ct_userid = exp.ctuser AND (rating = 'Accepted' OR rating = 'Pending')) > 4 THEN 5
+  HAVING COUNT(*) >= CASE -- Using >=4 as good rating
+                      WHEN (SELECT avg(la.rating) FROM Looking_After la WHERE la.ct_userid = exp.ctuser AND (rating = 'Accepted' OR rating = 'Pending')) >= 4 THEN 5
                       ELSE 2
                     END)
   )UNION(
   SELECT ft.ct_userid FROM FT_validpet ft WHERE ft.pet_type IN( --FTCT who can care for this pettype
-    SELECT p.pet_type FROM Pet p WHERE p.pet_name = bid_search.petname)
+    SELECT p.pet_type FROM Pet p WHERE p.pet_name = bid_search.petname AND p.dead = 0)
   EXCEPT(SELECT ftl.ct_userid FROM FT_Leave ftl -- Remove FT who are unavailable. Check that this part works, not sure if logic correct
             WHERE NOT ((bid_search.sd < ftl.leave_sd AND bid_search.ed < ftl.leave_sd) OR (bid_search.sd > ftl.leave_ed AND bid_search.sd > ftl.leave_ed)))
-  EXCEPT(--Remove FT caretakers who have 5 pets at any day in this date range
+  EXCEPT(--Remove FT caretakers who have >=5 pets at any day in this date range
   SELECT exp2.ctuser FROM explode_date(sd, ed) exp2
   GROUP BY exp2.ctuser, exp2.day
   HAVING COUNT(*) >= 5
@@ -342,7 +342,7 @@ $func$
 BEGIN
   UPDATE Looking_After la
   SET rating=write_review_rating.rating, review=write_review_rating.review
-    WHERE la.po_userid = write_review_rating.userid AND la.ct_userid = write_review_rating.ct_userid AND la.start_date = write_review_rating.start_date AND la.end_date = write_review_rating.end_date;
+  WHERE la.po_userid = write_review_rating.userid AND la.ct_userid = write_review_rating.ct_userid AND la.start_date = write_review_rating.start_date AND la.end_date = write_review_rating.end_date;
 END;
 $func$
 LANGUAGE plpgsql;
@@ -350,7 +350,7 @@ LANGUAGE plpgsql;
 
 
 -- Page 12
-CREATE OR REPLACE FUNCTION ftpt_upcoming(userid VARCHAR) --ft and pt both use same function. Possible problems if FT becomes PT or vice versa? Or we just assume they can't do that
+CREATE OR REPLACE FUNCTION ftpt_upcoming(userid VARCHAR)
 RETURNS TABLE (petname VARCHAR, name VARCHAR,  start_date DATE, end_date DATE) AS
 $func$
 BEGIN
@@ -366,7 +366,7 @@ $func$
 LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE FUNCTION ftpt_pending(userid VARCHAR) --ft and pt both use same function. Possible problems if FT becomes PT or vice versa? Or we just assume they can't do that
+CREATE OR REPLACE FUNCTION ftpt_pending(userid VARCHAR)
 RETURNS TABLE (petname VARCHAR, name VARCHAR,  start_date DATE, end_date DATE) AS
 $func$
 BEGIN
@@ -385,14 +385,12 @@ LANGUAGE plpgsql;
 
 -- Page 13
 CREATE OR REPLACE PROCEDURE ft_applyleave(userid VARCHAR, sd DATE, ed DATE) AS
-$func$ --TODO: add a check for if FT has taken too much leave, 
---cannot apply leave if >=1 pet under their care
---search from ft_leave sd to ed, if userid alredy
+$func$
 DECLARE
   involved INTEGER;
 BEGIN
-  involved = (SELECT COUNT(*) FROM Looking_After la WHERE la.ct_userid = userid and sd between la.start_date and la.end_date or ed between la.start_date and la.end_date);
-  IF involved = 0 THEN--condition to check if pet under their care
+  involved = (SELECT COUNT(*) FROM Looking_After la WHERE la.ct_userid = userid AND ((sd BETWEEN la.start_date AND la.end_date) OR (ed BETWEEN la.start_date AND la.end_date)));
+  IF involved = 0 THEN -- Condition to check if no pet under their care
     INSERT INTO FT_Leave VALUES (ft_applyleave.userid, ft_applyleave.sd, ft_applyleave.ed);
   END IF;
 END;
@@ -424,7 +422,7 @@ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE pt_applyavail(userid VARCHAR, sd DATE, ed DATE) AS
 $func$ --Checks that PT is applying availability within the next 2 years
-BEGIN --CURRENT_DATE is builtin sql function returning current date
+BEGIN
   IF EXTRACT(YEAR FROM CURRENT_DATE) - EXTRACT(YEAR FROM pt_applyavail.sd) BETWEEN 0 AND 1 THEN
     INSERT INTO PT_Availability VALUES (pt_applyavail.userid, pt_applyavail.sd, pt_applyavail.ed);
   END IF;
@@ -446,14 +444,12 @@ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE PROCEDURE pt_del_date(userid VARCHAR, sd DATE, ed DATE) AS
-$func$ -- No need to check which table user is in, just delete from both pt and ft tables
--- TODO: Maybe delete, this function sucks
+$func$ -- For PTCT to cancel availability
 DECLARE pt_booked INTEGER;
 BEGIN
   pt_booked = (SELECT COUNT(*)
     FROM Looking_After la
-    WHERE la.ct_userid = pt_del_date.userid AND pt_del_date.sd <= la.start_date AND pt_del_date.ed >= la.end_date AND la.status = 'Pending');
-  
+    WHERE la.ct_userid = pt_del_date.userid AND (la.status = 'Pending' OR la.status = 'Accepted') AND NOT (pt_del_date.ed <= la.start_date OR pt_del_date.sd >= la.end_date) );
   IF pt_booked = 0 THEN
     DELETE FROM PT_Availability pt WHERE pt.ct_userid = pt_del_date.userid AND pt.avail_sd = pt_del_date.sd AND pt.avail_ed = pt_del_date.ed;
   END IF;
