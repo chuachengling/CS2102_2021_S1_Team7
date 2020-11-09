@@ -301,7 +301,7 @@ LANGUAGE plpgsql;
 CREATE OR REPLACE PROCEDURE applyBooking (pouid VARCHAR, petname VARCHAR, ctuid VARCHAR, sd DATE, ed DATE, price FLOAT, payment_op VARCHAR) AS
 $func$
 BEGIN
-  IF SELECT ct.full_time FROM Caretaker ct WHERE ct.ct_userid = applyBooking.ctuid THEN
+  IF (SELECT ct.full_time FROM Caretaker ct WHERE ct.ct_userid = applyBooking.ctuid) THEN
     INSERT INTO Looking_After (po_userid, ct_userid, pet_name, start_date, end_date, status, trans_pr, payment_op)
     VALUES (applyBooking.pouid, applyBooking.ctuid, applyBooking.petname, applyBooking.sd, applyBooking.ed, 'Accepted', applyBooking.price, applyBooking.payment_op);
   ELSE
@@ -712,17 +712,17 @@ FOR EACH ROW EXECUTE PROCEDURE trigger_pending_check();
 CREATE OR REPLACE FUNCTION trigger_pt_avail_overlap_check()
 RETURNS TRIGGER AS
 $$ BEGIN
-  IF EXISTS(SELECT 1 FROM PT_Availability pta WHERE NEW.userid = pta.userid AND NEW.sd >= pta.sd AND NEW.ed =< pta.ed) THEN
+  IF EXISTS(SELECT 1 FROM PT_Availability pta WHERE NEW.ct_userid = pta.ct_userid AND NEW.avail_sd >= pta.avail_sd AND NEW.avail_ed <= pta.avail_ed) THEN
     RAISE EXCEPTION 'Error applying availability: You previously already indicated availability in this period';
   END IF;
   
-  IF EXISTS(SELECT 1 FROM PT_Availability pta WHERE NEW.userid = pta.userid AND
-  ( ( (NEW.sd BETWEEN pta.sd AND pta.ed) AND NEW.sd > pta.ed )
-  OR ( (NEW.ed BETWEEN pta.sd AND pta.ed) AND NEW.sd < pta.sd ) ) ) THEN
+  IF EXISTS(SELECT 1 FROM PT_Availability pta WHERE NEW.ct_userid = pta.ct_userid AND
+  ( ( (NEW.avail_sd BETWEEN pta.avail_sd AND pta.avail_ed) AND NEW.avail_sd > pta.avail_ed )
+  OR ( (NEW.avail_ed BETWEEN pta.avail_sd AND pta.avail_ed) AND NEW.avail_sd < pta.avail_sd ) ) ) THEN
     RAISE EXCEPTION 'Error applying availability: Overlaps with a previously applied availability';
   END IF;
   
-  DELETE FROM PT_Availability WHERE NEW.userid = pta.userid AND NEW.sd <= pta.sd AND NEW.ed >= pta.ed; --Delete smaller availability interval
+  DELETE FROM PT_Availability pta WHERE NEW.ct_userid = pta.ct_userid AND NEW.avail_sd <= pta.avail_sd AND NEW.avail_ed >= pta.avail_ed; --Delete smaller availability interval
   RETURN NEW;
 END;
 $$

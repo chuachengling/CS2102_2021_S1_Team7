@@ -2,7 +2,5 @@ INSERT INTO FT_Leave (ct_userid, leave_sd, leave_ed) VALUES
 ('vvreiberg9f', '2020-10-29', '2020-11-02'),
 ('vvreiberg9f', '2020-11-10', '2020-11-16'),
 ('dsingyardjz', '2020-11-10', '2020-11-13'),
-('oivanikhin2t', '2020-10-08', '2020-10-08'),
 ('oivanikhin2t', '2020-10-27', '2020-11-01'),
-('socloneyq6', '2020-10-01', '2020-10-02'),
 ('socloneyq6', '2020-11-17', '2020-11-21');
