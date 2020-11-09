@@ -24,13 +24,15 @@ def printLog():
     print('\n'.join(log))
 
 # Constants
+_N_SCALE = 0.18
+
 _NORMAL_USERS = 0.995
 _ACTIVATED_USERS = 0.98
 
-_PET_OWNERS = 0.75
+_PET_OWNERS = 0.95
 _PO_CT_OVERLAP = 0.01
 
-_FULL_TIME = 0.2
+_FULL_TIME = 0.5
 
 _PET_LIST = ['Dog', 'Cat', 'Rabbit', 'Guinea pig', 'Hamster', 'Gerbil', 'Mouse', 'Chinchilla']
 _PET_OKAY_PROB = [0.85, 0.85, 0.6, 0.35, 0.3, 0.2, 0.01, 0.2]
@@ -39,8 +41,8 @@ _PT_MEAN_OFFSET = 15
 _PT_VARIANCE = 20
 
 
-_START_DATE = date(2020, 9, 1)
-_END_DATE = date(2020, 11, 1)
+_START_DATE = date(2020, 10, 1)
+_END_DATE = date(2020, 12, 1)
 _TOTAL_MONTHS = 2
 _PT_START_PROB = 0.20
 _PT_END_PROB = 0.4
@@ -50,17 +52,17 @@ _FT_END_PROB = 0.25
 _FT_MAX_RUN = 7
 
 _PET_DISTRI = [0.35, 0.35, 0.1, 0.04, 0.04, 0.01, 0.01, 0.1]
-_HAVE_PET_PROB = 0.35
+_HAVE_PET_PROB = 0.05
 _HAS_PAST_PET_PROB = 0.01
 _ADDITIONAL_PET_PROB = 0.2
 _PET_BDAY_START_DATE = date(2010, 1, 1)
 _PET_BDAY_END_DATE = date(2020, 6, 1)
 _PET_ADJ_PROB = 0.25
 
-_TODAY_DATE = date(2020, 9, 28)
+_TODAY_DATE = date(2020, 11, 12)
 _PT_BOOK_PROB = 0.9
 _FT_BOOK_PROB = 0.5
-_FT_LOAD_FACTOR = 15
+_FT_LOAD_FACTOR = 36
 _REVIEW_PROB = 0.7
 
 _ACCEPTED_PROB = 0.5
@@ -68,7 +70,7 @@ _PAYMENT_PROB = 0.5
 _FT_REVIEW_BOUNDS = (3, 5)
 _PT_REVIEW_BOUNDS = (2, 4)
 
-_CHAT_N = 4
+_CHAT_N = 2
 _CHAT_P = 0.25
 _CHAT_BACKTRACK_DAYS = 4
 
@@ -96,6 +98,9 @@ for line in secondUserIn:
     userData[userid] = password
 
 numUsers = len(userData)
+if _N_SCALE < 1:
+	numUsers = floor(numUsers*_N_SCALE)	
+
 writeLog('> {} unique users'.format(numUsers))
 
 # Read personal data
@@ -114,11 +119,13 @@ for line in secondPersonalDataIn:
         continue
     personalData.append((name, postal, address, hp, email))
 shuffle(personalData)
+personalData = personalData[:numUsers]
 
-numPersonalData = len(personalData)
 numNormalUsers = floor(_NORMAL_USERS * numUsers)
 numActivatedUsers = floor(_ACTIVATED_USERS * numNormalUsers)
 allUsers = list(userData.items())
+shuffle(allUsers)
+allUsers = allUsers[:numUsers]
 normalUsers = allUsers[:numNormalUsers]
 adminUsers = allUsers[numNormalUsers:]
 activatedUsers = normalUsers[:numActivatedUsers]
