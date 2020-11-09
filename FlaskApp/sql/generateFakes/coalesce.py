@@ -24,7 +24,7 @@ def printLog():
     print('\n'.join(log))
 
 # Constants
-_N_SCALE = 0.18
+_N_SCALE = 0.54
 
 _NORMAL_USERS = 0.995
 _ACTIVATED_USERS = 0.98

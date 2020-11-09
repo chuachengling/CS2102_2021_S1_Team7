@@ -1,3 +1,7 @@
 INSERT INTO Admin (userid) VALUES
-('vshires5i'),
-('egwinn9p');
+('igreggsr0'),
+('lbennell1w'),
+('fcraiknt'),
+('ksterne3'),
+('gstandbridgeao'),
+('bmatokhninhi');
