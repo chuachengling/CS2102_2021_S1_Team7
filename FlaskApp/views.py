@@ -6,7 +6,7 @@ from datetime import datetime, date, timedelta
 from sqlalchemy import func
 
 
-view = Blueprint("view",__name__)
+view = Blueprint("view", __name__)
 #from tables import RecentBooking
 
 
@@ -112,7 +112,7 @@ def render_reset():
     return "<h1>Hello</h1>\
     <h2>Don't forget your userid or password!</h2>"
 
-@view.route("/registration-2",methods=["GET", "POST","PUT","DELETE"])
+@view.route("/registration-2",methods=["GET", "POST", "PUT", "DELETE"])
 def render_setup_profile():
     form = Registration2Form()
     userid = session['userid']
@@ -123,7 +123,8 @@ def render_setup_profile():
         postal = form.postal.data
         address = form.address.data
         hp = form.hp.data
-        poct = form.poct.data
+        podata = form.po_checkbox.data
+        ctdata = form.ct_checkbox.data
         query1 = "INSERT INTO Accounts(userid,password) VALUES ('{}', '{}')".format(userid,password)
         db.session.execute(query1)
         db.session.commit()
@@ -131,6 +132,20 @@ def render_setup_profile():
             .format(userid,name,postal,address,hp,email)
         db.session.execute(query2)
         db.session.commit()
+        roles = ''
+        if podata:
+            query = "INSERT INTO Pet_Owner(po_userid) VALUES ('{}')".format(userid)
+            db.session.execute(query)
+            db.session.commit()
+            roles += 'po'
+        if ctdata:
+            query = "INSERT INTO Caretaker(ct_userid) VALUES ('{}')".format(userid)
+            db.session.execute(query)
+            db.session.commit()
+            if roles:
+                roles += '/'
+            roles += 'ptct'
+        session['user_role'] = roles
         return redirect('/settings/{}'.format(userid))
     return render_template("registration-2.html",form = form)
 
@@ -139,8 +154,8 @@ def render_setup_profile():
 def render_settings(userid):
     if 'userid' not in session:
         return redirect('login')
-    user_role = session['ftptpo']
-    return render_template("4_settings_profile.html",form = form)
+    user_role = session['user_role']
+    return render_template("4_settings_profile.html")
 
 
 @view.route("/profile/<nickname>",methods=["GET", "POST"])

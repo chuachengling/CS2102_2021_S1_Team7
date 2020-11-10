@@ -43,6 +43,10 @@ class MultiCheckboxField(SelectMultipleField):
     option_widget = widgets.CheckboxInput()
 
 class Registration2Form(FlaskForm):
+    def one_selected(form, field):
+        if not (form.po_checkbox.data or form.ct_checkbox.data):
+            raise ValidationError('At least one role has to be selected!')
+
     address = StringField(
         label='Address',
         validators=[InputRequired()],
@@ -50,17 +54,32 @@ class Registration2Form(FlaskForm):
     )
     postal = StringField(
         label = 'Postal Code',
-        validators = [InputRequired()],
+        validators = [Length(6, 6)],
         render_kw={'placeholder': 'Postal Code'}
     )
     hp = StringField(
         label='Handphone Number',
-        validators=[InputRequired()],
+        validators=[Length(8, 8)],
         render_kw={'placeholder': 'Handphone Number'}
     )
-    poct = MultiCheckboxField('Choose type',
-                                choices = [(1,'Pet Owner'),(2,'Caretaker')],
-                                coerce = int)
+    poct_label = Label(
+        field_id='poct_label',
+        text = 'I\'m signing up as a...'
+    )
+    po_checkbox = BooleanField(
+        label='Pet Owner',
+        validators=[one_selected],
+        # render_kw={'placeholder': 'Pet Owner'}
+    )
+    ct_checkbox = BooleanField(
+        label='Care Taker',
+        validators=[one_selected],
+        # render_kw={'placeholder': 'Pet Owner'}
+    )
+
+    # poct = MultiCheckboxField('Choose type',
+    #                             choices = [(1,'Pet Owner'),(2,'Caretaker')],
+    #                             coerce = int)
 
     submit = SubmitField("Submit")
 
