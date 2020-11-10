@@ -9,6 +9,17 @@ from sqlalchemy import func
 view = Blueprint("view", __name__)
 #from tables import RecentBooking
 
+def get_user_role(userid):
+    # query = 'SELECT user_type(\'{}\')'.format(userid)
+    user_role = db.session.execute(func.user_type(userid)).fetchone()[0]
+    roles = []
+    if 1 & user_role:
+        roles.append('po')
+    if 2 & user_role:
+        roles.append('ptct')
+    if 4 & user_role:
+        roles.append('ftct')
+    return '/'.join(str(i) for i in roles)
 
 @login_manager.user_loader
 def load_user(userid):
@@ -70,6 +81,7 @@ def render_login_page():
             ## Checks if password is correct 
             login_pass ="SELECT a.password FROM Accounts a WHERE userid = '{}' AND password = '{}'".format(userid,entered_password)  ### Supposed to use function but currently function does not work. 
             login_password = db.session.execute(login_pass).fetchall()
+            print(login_password)
 
             ## This equality will throw an error if the database is NOT loaded
             if login_password[0][0] == entered_password:
@@ -82,13 +94,14 @@ def render_login_page():
                 session['password'] = login_password[0][0]
                 session['email'] = email
 
-                #role_user = db.session.query(func.somefunc(userid)).fetchall()
-                role_user = [(1,)]
-                session['ftptpo'] = role_user[0]
-                
-                if role_user[0] == 1 or role_user[0] == 3 or role_user[0] == 5:
+                user_role = get_user_role(userid)
+
+                session['user_role'] = user_role
+                user_role = user_role.split('/')
+
+                if 'po' in user_role:
                     return redirect("/po_home")
-                elif role_user[0] == 2 or role_user[0] == 4:
+                elif 'ptct' in user_role or 'ftct' in user_role:
                     return redirect("/ct_home")
                 else: 
                     return redirect("/registration")
@@ -178,8 +191,13 @@ def render_po_home():
     data = db.session.query(func.po_upcoming_bookings('{}'.format(userid))).all()
     email = session['email']
     hp = db.session.query(func.find_hp('{}'.format(userid))).all()[0][0]
+    if 'user_role' not in session:
+        user_role = get_user_role(userid)
+    session['user_role'] = user_role
+    if 'po' not in user_role:
+        redirect('/po_home')
     #role_user = session['ftptpo]
-    role_user = 1
+    # role_user = 1
     ## completed transactions
     ct = db.session.query(func.pastTransactions('{}'.format(userid))).all()
 

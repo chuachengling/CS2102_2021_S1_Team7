@@ -27,9 +27,9 @@ DECLARE acc_type INTEGER = 0;
 BEGIN
   IF EXISTS(SELECT 1 FROM Pet_Owner po WHERE po.po_userid = user_type.userid) THEN acc_type = acc_type + 1;
   END IF; -- +1 if PO
-  IF EXISTS(SELECT 1 FROM PT_validpet pt WHERE pt.ct_userid = user_type.userid) THEN acc_type = acc_type + 2;
+  IF EXISTS(SELECT 1 FROM Caretaker pt WHERE pt.ct_userid = user_type.userid AND full_time = FALSE) THEN acc_type = acc_type + 2;
   END IF; -- +2 if CTPT
-  IF EXISTS(SELECT 1 FROM FT_validpet ft WHERE ft.ct_userid = user_type.userid) THEN acc_type = acc_type + 4;
+  IF EXISTS(SELECT 1 FROM Caretaker ft WHERE ft.ct_userid = user_type.userid AND full_time = TRUE) THEN acc_type = acc_type + 4;
   END IF; -- +4 if CTFT
   RETURN(acc_type);
 END;
