@@ -102,7 +102,7 @@ def render_login_page():
                 if 'po' in user_role:
                     return redirect("/po_home")
                 elif 'ptct' in user_role or 'ftct' in user_role:
-                    return redirect("/ct_home")
+                    return redirect("/pt_home")
                 else: 
                     return redirect("/registration")
             else:
@@ -193,9 +193,10 @@ def render_po_home():
     hp = db.session.query(func.find_hp('{}'.format(userid))).all()[0][0]
     if 'user_role' not in session:
         user_role = get_user_role(userid)
-    session['user_role'] = user_role
+        session['user_role'] = user_role
+    user_role = session['user_role']
     if 'po' not in user_role:
-        redirect('/po_home')
+        return redirect('/pt_home')
     #role_user = session['ftptpo]
     # role_user = 1
     ## completed transactions
@@ -241,7 +242,7 @@ def render_po_home():
                                             hp = hp,\
                                             email = email,\
                                             comp_trans = comp_trans,\
-                                            ftpt = role_user
+                                            ftpt = user_role
                                             )
 
 
@@ -253,8 +254,17 @@ def render_pt_home():
         return redirect('/login')
     
     name = session['name']
+
     #userid = session['userid']
-    userid = 'lcorkella5' ## change this later
+    userid = 'aneildy' ## change this later
+    if 'user_role' not in session:
+        user_role = get_user_role(userid)
+        session['user_role'] = user_role
+    user_role = session['user_role']
+    if 'ftct' in user_role:
+        return redirect('/ft_home')
+    elif 'ptct' not in user_role:
+        return redirect('/po_home')
 
     ## need to create logic if 
     ## person is not caretaker 
@@ -273,9 +283,11 @@ def render_pt_home():
         pending_jobs.append(dict(zip(('pet_name', 'userid', 'start_date', 'end_date'), row[0][1:-1].split(","))))
 
 
-    return render_template("/12_PT_home.html",name = name,\
-                                                upcoming_jobs = upcoming_jobs,\
-                                                pending_jobs = pending_jobs)
+    return render_template("/12_PT_home.html", name = name,
+        upcoming_jobs = upcoming_jobs,
+        has_upcoming = (len(upcoming_jobs) > 0),
+        pending_jobs = pending_jobs,
+        has_pending = (len(pending_jobs) > 0))
 
 @view.route("/ft_home",methods=["GET", "POST"])
 def render_ft_home():
@@ -286,7 +298,15 @@ def render_ft_home():
         
     name = session['name']
     #userid = session['userid']
-    userid = 'lcorkella5' ## change this later
+    userid = 'deverton82' ## change this later
+    # if 'user_role' not in session:
+    user_role = get_user_role(userid)
+    session['user_role'] = user_role
+    user_role = session['user_role']
+    if 'ptct' in user_role:
+        return redirect('/pt_home')
+    elif 'ftct' not in user_role:
+        return redirect('/po_home')
 
     ## need to create logic if 
     ## person is not caretaker 
@@ -298,9 +318,9 @@ def render_ft_home():
     for row in data_upcoming:
         upcoming_jobs.append(dict(zip(('pet_name', 'userid', 'start_date', 'end_date'), row[0][1:-1].split(","))))
     
-    return render_template("/12_FT_home.html",name = name,\
-                                                upcoming_jobs = upcoming_jobs) 
-
+    return render_template("/12_FT_home.html", name = name,
+        upcoming_jobs = upcoming_jobs,
+        has_upcoming = (len(upcoming_jobs) > 0))
 
 @view.route("/search/<start_date>/<end_date>",methods=["GET", "POST"])
 def render_search(start_date,end_date):

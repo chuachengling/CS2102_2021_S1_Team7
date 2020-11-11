@@ -38,11 +38,11 @@ Licence URI: https://www.os-templates.com/template-terms
   <header id="header" class="hoc clear"> 
     <!-- ################################################################################################ -->
     <div id="logo" class="one_quarter first">
-      <h1><a href="12_FT_home.html">Care Taker</a></h1> <!-- depends if CO and CT overlap -->
+      <h1><a href="/pt_home.html">Care Taker</a></h1> <!-- depends if CO and CT overlap -->
     </div>
     
     <div id="logo" class="one_quarter">
-      <h1><a href="5_PO_home.html">Pet Owner</a></h1>
+      <h1><a href="/po_home">Pet Owner</a></h1>
     </div>
       
     <div id="logo" class="one_quarter">
@@ -78,6 +78,7 @@ Licence URI: https://www.os-templates.com/template-terms
       <br>      
       <h2 class="pageintro"></h2> <!-- fill name of PO -->
       <p>Upcoming Jobs for the next 2 weeks:</p>
+        {% if has_upcoming %}
 
         <table style="width: 100%">
         <tr>
@@ -103,6 +104,10 @@ Licence URI: https://www.os-templates.com/template-terms
             <td></td>
           </tr>
           {% endfor %}
+        </table>
+          {% else %}
+          <p>No new upcoming jobs!</p>
+          {% endif %}
     </article>
 </div>
 </div>
