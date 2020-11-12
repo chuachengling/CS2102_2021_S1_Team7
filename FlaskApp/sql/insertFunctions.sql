@@ -1,3 +1,56 @@
+-- Admin Homepage
+--Total number of Pet taken care of in the month.
+--(b) Total salary to be paid to all Care Taker for the given month. HARD
+--(c) The month with the highest number of jobs.
+--(d) The underperforming1 full-time Care Taker.
+--THINK OF MORE FUNCTIONS
+CREATE OR REPLACE FUNCTION admin_total_num_pets(year INT, month INT)
+RETURNS INT AS
+$func$
+BEGIN
+  RETURN(
+  SELECT COUNT(DISTINCT(la.po_userid||la.pet_name||la.dead)) FROM Looking_After la
+  WHERE la.status = 'Completed' AND
+  ((EXTRACT(YEAR FROM la.start_date) = admin_total_num_pets.year AND EXTRACT(MONTH FROM la.start_date) = admin_total_num_pets.month)
+  OR (EXTRACT(YEAR FROM la.start_date) = admin_total_num_pets.year AND EXTRACT(MONTH FROM la.start_date) = admin_total_num_pets.month))
+  );
+END;
+$func$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION admin_revenue_this_mnth(year INT, month INT)
+RETURNS FLOAT4 AS
+$func$
+DECLARE
+    firstday DATE;
+    lastday DATE;
+BEGIN
+  firstday = cast(concat(cast(admin_revenue_this_mnth.year AS VARCHAR), '-', cast(admin_revenue_this_mnth.month AS VARCHAR),'-01') AS date);
+  lastday = cast(concat(cast(admin_revenue_this_mnth.year AS VARCHAR), '-', cast((admin_revenue_this_mnth.month+1) AS VARCHAR), '-01') AS date) - 1;
+  RETURN 0 + COALESCE((SELECT sum(la.trans_pr)
+  FROM Looking_After la
+  WHERE la.start_date >= firstday AND la.end_date <= lastday
+  AND la.status = 'Completed'), 0) --Transaction occurs completely in this month
+  +
+  COALESCE((SELECT sum(lab.trans_pr * (lab.end_date - firstday + 1)/(lab.end_date - lab.start_date + 1)) -- Multiplies trans_pr by no. of days that transaction was in this month
+  FROM Looking_After lab
+  WHERE lab.start_date < firstday AND lab.end_date <= lastday AND lab.end_date >= firstday
+  AND lab.status = 'Completed'), 0) --Transaction starts before this month, but ends during
+  +
+  COALESCE((SELECT sum(lac.trans_pr * (lastday - lac.start_date + 1)/(lac.end_date - lac.start_date + 1)) -- Multiplies trans_pr by no. of days that transaction was in this month
+  FROM Looking_After lac
+  WHERE lac.start_date <= lastday AND lac.start_date >= firstday AND lac.end_date > lastday
+  AND lac.status = 'Completed'), 0); --Transaction starts during this month, but ends after
+END;
+$func$
+LANGUAGE plpgsql;
+
+-- TODO: function to calculate profit
+
+
+
+
+
 -- Page 1
 CREATE OR REPLACE FUNCTION login(username VARCHAR, pw VARCHAR)
 RETURNS BOOLEAN AS
@@ -5,13 +58,12 @@ $func$
 BEGIN
 --Mark transaction as completed if end date is over
   UPDATE Looking_After la
-  SET la.status = 'Completed'
+  SET status = 'Completed'
   WHERE la.status = 'Accepted' AND la.end_date > CURRENT_DATE;
 
   RETURN(SELECT EXISTS(
     SELECT 1 FROM Accounts a
-    WHERE login.username = a.userid AND login.pw = a.password)
-    );
+    WHERE login.username = a.userid AND login.pw = a.password));
 END;
 $func$
 LANGUAGE plpgsql;
@@ -281,17 +333,13 @@ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION pastTransactions (userid VARCHAR)
-RETURNS TABLE (name VARCHAR, pet_name VARCHAR, start_date DATE, end_date DATE) AS
+RETURNS TABLE (po_name VARCHAR, ct_name VARCHAR, pet_name VARCHAR, dead INTEGER, start_date DATE, end_date DATE) AS
 $func$
 BEGIN
 RETURN QUERY(
-  SELECT b.pet_name, c.name, b.start_date, b.end_date FROM
- (SELECT  la.pet_name,la.ct_userid , la.start_date, la.end_date
+ SELECT (SELECT u.name FROM Users u WHERE u.userid = la.po_userid) AS po_name, (SELECT u.name FROM Users u WHERE u.userid = la.ct_userid) AS ct_name, la.pet_name, la.dead, la.start_date, la.end_date
  FROM Looking_After la
- WHERE (la.po_userid = pastTransactions.userid OR la.ct_userid = pastTransactions.userid) AND la.status = 'Completed') AS b
-  INNER JOIN 
-  (SELECT u.name, u.userid FROM Users u) AS c ON c.userid = b.ct_userid
- );
+ WHERE (la.po_userid = pastTransactions.userid OR la.ct_userid = pastTransactions.userid) AND la.status = 'Completed');
 END;
 $func$
 LANGUAGE plpgsql;
@@ -300,7 +348,7 @@ LANGUAGE plpgsql;
 
 -- Page 6
 CREATE OR REPLACE FUNCTION caretakerReviewRatings (userid VARCHAR)
-RETURNS TABLE (review VARCHAR, rating FLOAT) AS
+RETURNS TABLE (review VARCHAR, rating FLOAT4) AS
 $func$
 BEGIN
 RETURN QUERY(
@@ -315,11 +363,11 @@ LANGUAGE plpgsql;
 
 
 -- Page 7
-CREATE OR REPLACE FUNCTION find_pettype(userid VARCHAR, petname VARCHAR)
+CREATE OR REPLACE FUNCTION find_pettype(userid VARCHAR, petname VARCHAR, dead INTEGER)
 RETURNS VARCHAR AS
 $func$
 BEGIN
-  RETURN (SELECT p.pet_type FROM Pet p WHERE p.po_userid = find_pettype.userid AND p.pet_name = find_pettype.petname AND p.dead = 0);
+  RETURN (SELECT p.pet_type FROM Pet p WHERE p.po_userid = find_pettype.userid AND p.pet_name = find_pettype.petname AND p.dead = find_pettype.dead);
 END;
 $func$
 LANGUAGE plpgsql;
@@ -333,11 +381,11 @@ END;
 $func$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION find_specreq(userid VARCHAR, petname VARCHAR)
+CREATE OR REPLACE FUNCTION find_specreq(userid VARCHAR, petname VARCHAR, dead INTEGER)
 RETURNS VARCHAR AS
 $func$
 BEGIN
-  RETURN (SELECT p.spec_req FROM Pet p WHERE p.po_userid = find_specreq.userid AND p.pet_name = find_specreq.petname AND p.dead = 0);
+  RETURN (SELECT p.spec_req FROM Pet p WHERE p.po_userid = find_specreq.userid AND p.pet_name = find_specreq.petname AND p.dead = find_specreq.dead);
 END;
 $func$
 LANGUAGE plpgsql;
@@ -360,18 +408,26 @@ CREATE OR REPLACE FUNCTION find_card(userid VARCHAR)
 RETURNS INTEGER AS
 $func$
 BEGIN
-  RETURN (COALESCE((SELECT po.credit FROM Pet_Owner po WHERE po.po_userid = find_card.userid), 0));
+  RETURN (COALESCE(CAST((SELECT po.credit FROM Pet_Owner po WHERE po.po_userid = find_card.userid) AS INTEGER), 0));
 END;
 $func$
 LANGUAGE plpgsql;
 
 -- Page 8
---fn to find trans_pr
-CREATE OR REPLACE FUNCTION what_trans_pr(ct_userid VARCHAR, pet_name VARCHAR, sd DATE, ed DATE)
+CREATE OR REPLACE FUNCTION what_caretaker(po_userid VARCHAR, petname VARCHAR, sd DATE, ed DATE)
+RETURNS VARCHAR AS
+$func$
+BEGIN
+  SELECT la.ct_userid FROM Looking_After la WHERE la.po_userid = what_caretaker.po_userid AND la.pet_name = what_caretaker.petname AND la.start_date = what_caretaker.sd AND la.end_date = what_caretaker.ed;
+END;
+$func$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION what_trans_pr(ct_userid VARCHAR, pettype VARCHAR, sd DATE, ed DATE)
 RETURNS FLOAT4 AS
 $func$
 BEGIN
-  RETURN((sd-ed+1)*find_rate(what_trans_pr.ct_userid, find_pettype(what_trans_pr.ct_userid, what_trans_pr.pet_name)));
+  RETURN((sd-ed+1)*find_rate(what_trans_pr.ct_userid, find_pettype(what_trans_pr.ct_userid, what_trans_pr.pettype)));
 END;
 $func$
 LANGUAGE plpgsql;
@@ -398,11 +454,11 @@ LANGUAGE plpgsql;
 
 -- Page 9
 CREATE OR REPLACE FUNCTION all_your_transac(userid VARCHAR)
-RETURNS TABLE (ct_userid VARCHAR, po_userid VARCHAR, pet_name VARCHAR, start_date DATE, end_date DATE, status VARCHAR, rating FLOAT) AS
+RETURNS TABLE (ct_userid VARCHAR, po_userid VARCHAR, pet_name VARCHAR, la.dead INTEGER, start_date DATE, end_date DATE, status VARCHAR, rating FLOAT4) AS
 $func$
 BEGIN
 RETURN QUERY(
-    SELECT la.ct_userid, la.po_userid, la.pet_name, la.start_date, la.end_date, la.status, la.rating FROM Looking_After la
+    SELECT la.ct_userid, la.po_userid, la.pet_name, la.dead, la.start_date, la.end_date, la.status, la.rating FROM Looking_After la
     WHERE la.po_userid = all_your_transac.userid OR la.ct_userid = all_your_transac.userid
     );
 END;
@@ -413,7 +469,7 @@ LANGUAGE plpgsql;
 
 -- Page 10
 CREATE OR REPLACE FUNCTION ct_reviews(userid VARCHAR)
-RETURNS TABLE (ct_userid VARCHAR, po_userid VARCHAR, pet_name VARCHAR, start_date DATE, end_date DATE, status VARCHAR, rating FLOAT, review VARCHAR) AS
+RETURNS TABLE (ct_userid VARCHAR, po_userid VARCHAR, pet_name VARCHAR, start_date DATE, end_date DATE, status VARCHAR, rating FLOAT4, review VARCHAR) AS
 $func$
 BEGIN
 RETURN QUERY(
@@ -427,7 +483,7 @@ LANGUAGE plpgsql;
 
 
 -- Page 11
-CREATE OR REPLACE PROCEDURE write_review_rating(userid VARCHAR, pet_name VARCHAR, ct_userid VARCHAR, start_date DATE, end_date DATE, rating INTEGER, review VARCHAR) AS
+CREATE OR REPLACE PROCEDURE write_review_rating(userid VARCHAR, pet_name VARCHAR, ct_userid VARCHAR, start_date DATE, end_date DATE, rating FLOAT4, review VARCHAR) AS
 $func$
 BEGIN
   UPDATE Looking_After la
@@ -547,22 +603,21 @@ END;
 $func$
 LANGUAGE plpgsql;
 
+
 -- Page 14
--- TODO: THIS FUNCTION MAY BE DELETED
-CREATE OR REPLACE FUNCTION pastsalary(userid VARCHAR)
-RETURNS TABLE (year INT, month INT, salary FLOAT) AS
+CREATE OR REPLACE FUNCTION for_gen_buttons(userid VARCHAR)
+RETURNS TABLE(dur TEXT) AS
 $func$
 BEGIN
-RETURN QUERY(
-  SELECT s.year, s.month, sum(s.amount) as salary
-  FROM Salary s
-    WHERE s.ct_userid = ptft_del_date.userid
-    GROUP BY s.year, s.month
-    );
+  RETURN QUERY(
+  SELECT DISTINCT CONCAT(CAST(EXTRACT(MONTH FROM tmp.dur) AS INT),',',CAST(EXTRACT(YEAR FROM tmp.dur) AS INT)) AS mth_yr
+  FROM ((SELECT la1.start_date AS dur FROM Looking_After la1 WHERE la1.ct_userid = for_gen_buttons.userid)
+       UNION
+       (SELECT la2.end_date AS dur FROM Looking_After la2 WHERE la2.ct_userid = for_gen_buttons.userid)) tmp
+  ORDER BY mth_yr DESC);
 END;
 $func$
 LANGUAGE plpgsql;
-
 
 -- Page 15
 CREATE OR REPLACE FUNCTION total_pet_day_mnth(userid VARCHAR, year INT, month INT)
@@ -574,26 +629,26 @@ DECLARE
 BEGIN
   RETURN (
   SELECT 
-  GREATEST((SELECT SUM(CAST(EXTRACT(DAY FROM la.end_date) AS INT) - CAST(EXTRACT(DAY FROM la.start_date) AS INT) + 1)
+  COALESCE((SELECT SUM(CAST(EXTRACT(DAY FROM la.end_date) AS INT) - CAST(EXTRACT(DAY FROM la.start_date) AS INT) + 1)
   FROM Looking_After la
   WHERE total_pet_day_mnth.userid = la.ct_userid
   AND la.start_date >= firstday AND la.end_date < lastday
   AND la.status = 'Completed' --Transaction occurs completely in this month
   GROUP BY la.ct_userid),0)
   +
-  GREATEST((SELECT SUM(CAST(EXTRACT(DAY FROM lab.end_date) AS INT) - CAST(EXTRACT(DAY FROM firstday) AS INT) + 1)
+  COALESCE((SELECT SUM(CAST(EXTRACT(DAY FROM lab.end_date) AS INT) - CAST(EXTRACT(DAY FROM firstday) AS INT) + 1)
   FROM Looking_After lab
   WHERE total_pet_day_mnth.userid = lab.ct_userid
   AND lab.start_date < firstday AND lab.end_date < lastday AND lab.end_date >= firstday
   AND lab.status = 'Completed' --Transaction starts before this month, but ends during
   GROUP BY lab.ct_userid),0)
   - 
-  GREATEST((SELECT SUM(CAST(EXTRACT(DAY FROM lastday) AS INT) - CAST(EXTRACT(DAY FROM lac.start_date) AS INT) - 1)
+  COALESCE((SELECT SUM(CAST(EXTRACT(DAY FROM lastday) AS INT) - CAST(EXTRACT(DAY FROM lac.start_date) AS INT) - 1)
   FROM Looking_After lac
   WHERE total_pet_day_mnth.userid = lac.ct_userid
   AND lac.start_date < lastday AND lac.start_date >= firstday AND lac.end_date > lastday
   AND lac.status = 'Completed' --Transaction starts during this month, but ends after
-  GROUP BY lac.ct_userid),-99999)
+  GROUP BY lac.ct_userid),0)
   );
 END;
 $func$
@@ -608,20 +663,20 @@ DECLARE
     lastday DATE;
 BEGIN
   firstday = cast(concat(cast(year AS VARCHAR), '-', cast(month AS VARCHAR),'-01') AS date);
-  lastday = cast(concat(cast(year AS VARCHAR), '-', cast((month+1) AS VARCHAR), '-01') AS date);
+  lastday = cast(concat(cast(year AS VARCHAR), '-', cast((month+1) AS VARCHAR), '-01') AS date) - 1;
   RETURN 0 + COALESCE((SELECT sum(la.trans_pr)
   FROM Looking_After la
   WHERE userid = la.ct_userid
   AND la.start_date >= firstday AND la.end_date <= lastday
   AND la.status = 'Completed'), 0) --Transaction occurs completely in this month
   +
-  COALESCE((SELECT sum(lab.trans_pr * (lab.end_date - firstday)/(lab.end_date - lab.start_date)) -- Multiplies trans_pr by no. of days that transaction was in this month
+  COALESCE((SELECT sum(lab.trans_pr * (lab.end_date - firstday + 1)/(lab.end_date - lab.start_date + 1)) -- Multiplies trans_pr by no. of days that transaction was in this month
   FROM Looking_After lab
   WHERE userid = lab.ct_userid
-  AND lab.start_date < firstday AND lab.end_date < lastday AND lab.end_date >= firstday
+  AND lab.start_date < firstday AND lab.end_date <= lastday AND lab.end_date >= firstday
   AND lab.status = 'Completed'), 0) --Transaction starts before this month, but ends during
   +
-  COALESCE((SELECT sum(lac.trans_pr * (lastday - lac.start_date)/(lac.end_date - lac.start_date)) -- Multiplies trans_pr by no. of days that transaction was in this month
+  COALESCE((SELECT sum(lac.trans_pr * (lastday - lac.start_date + 1)/(lac.end_date - lac.start_date + 1)) -- Multiplies trans_pr by no. of days that transaction was in this month
   FROM Looking_After lac
   WHERE userid = lac.ct_userid
   AND lac.start_date <= lastday AND lac.start_date >= firstday AND lac.end_date > lastday
@@ -635,7 +690,7 @@ LANGUAGE plpgsql;
 -- pt 75% as payment
 CREATE OR REPLACE FUNCTION what_salary(userid VARCHAR, dur DATE)
 RETURNS FLOAT4 AS
-$func$
+$func$ --dur yearmonth is used
 DECLARE
   earnings FLOAT;
 BEGIN
