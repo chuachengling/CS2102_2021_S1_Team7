@@ -9,6 +9,25 @@ from sqlalchemy import func
 view = Blueprint("view", __name__)
 #from tables import RecentBooking
 
+## Creates a dictionary that handles logic across all pages.
+
+def panel_filler(user_role,userid):
+    panel = {'panel_ct':'','panel_po':'','profile':'/settings/','all_transact':'/transactions/'}
+    if 'po' in user_role:
+        panel['panel_po'] = panel['panel_ct'] + '/po_home'
+    elif 'ptct' in user_role:
+        panel['panel_ct'] = panel['panel_ct'] +'/pt_home'
+    elif 'ftct' in user_role:
+        panel['panel_ct'] = panel['panel_ct'] + '/ft_home'
+    else: 
+        raise Exception('ValueError: There is not information on the user')
+
+    panel['profile'] = panel['profile'] + userid
+    panel['all_transact'] = panel['all_transact'] + userid
+
+    return panel
+                
+
 def get_user_role(userid):
     # query = 'SELECT user_type(\'{}\')'.format(userid)
     user_role = db.session.execute(func.user_type(userid)).fetchone()[0]
@@ -65,66 +84,6 @@ def render_registration_page():
             return redirect("/registration-2")
     return render_template("registration.html", form=form)
 
-
-@view.route("/login", methods=["GET", "POST"])
-def render_login_page():
-    form = LoginForm()
-    userid = form.userid.data
-    entered_password = form.password.data
-    email = form.email.data
-    if form.is_submitted():
-        print("userid entered:", form.userid.data)
-        print("password entered:", form.password.data)
-    if form.validate_on_submit():
-        exists_user = db.session.execute(func.login(userid,entered_password)).fetchall()  
-        if exists_user:
-            ## Checks if password is correct 
-            login_pass ="SELECT a.password FROM Accounts a WHERE userid = '{}' AND password = '{}'".format(userid,entered_password)  ### Supposed to use function but currently function does not work. 
-            login_password = db.session.execute(login_pass).fetchall()
-            print(login_password)
-
-            ## This equality will throw an error if the database is NOT loaded
-            if login_password[0][0] == entered_password:
-                fetch_name = "SELECT a.name FROM Users a WHERE userid ='{}' AND email = '{}'".format(userid,email)
-                name = db.session.execute(fetch_name).fetchall()
-                
-                ##Updates Session
-                session['name'] = name[0][0]
-                session['userid'] = userid
-                session['password'] = login_password[0][0]
-                session['email'] = email
-
-                user_role = get_user_role(userid)
-
-                session['user_role'] = user_role
-                user_role = user_role.split('/')
-
-                if 'po' in user_role:
-                    return redirect("/po_home")
-                elif 'ptct' in user_role or 'ftct' in user_role:
-                    return redirect("/pt_home")
-                else: 
-                    return redirect("/registration")
-            else:
-                ## Need to think how to reset the page and tell user password is wrong
-                return redirect("/reset")
-    return render_template("login.html",form = form)
-
-@view.route('/logout')
-def render_logout_page():
-    session.pop('userid',None)
-    return redirect('/')
-
-@view.route("/privileged-page", methods=["GET"])
-@login_required
-def render_privileged_page():
-    return "<h1>Hello, {}!</h1>".format(current_user.preferred_name or current_user.userid)
-
-@view.route("/reset",methods = ["GET"])
-def render_reset():
-    return "<h1>Hello</h1>\
-    <h2>Don't forget your userid or password!</h2>"
-
 @view.route("/registration-2",methods=["GET", "POST", "PUT", "DELETE"])
 def render_setup_profile():
     form = Registration2Form()
@@ -159,8 +118,75 @@ def render_setup_profile():
                 roles += '/'
             roles += 'ptct'
         session['user_role'] = roles
+        session['panel'] = panel_filler(roles,userid)
         return redirect('/settings/{}'.format(userid))
     return render_template("registration-2.html",form = form)
+
+@view.route("/login", methods=["GET", "POST"])
+def render_login_page():
+    form = LoginForm()
+    userid = form.userid.data
+    entered_password = form.password.data
+    email = form.email.data 
+    if form.is_submitted():
+        print("userid entered:", form.userid.data)
+        print("password entered:", form.password.data)
+    if form.validate_on_submit():
+        exists_user = db.session.execute(func.login(userid,entered_password)).fetchall()  
+        if exists_user:
+            ## Checks if password is correct 
+            login_pass ="SELECT a.password FROM Accounts a WHERE userid = '{}' AND password = '{}'".format(userid,entered_password)  ### Supposed to use function but currently function does not work. 
+            login_password = db.session.execute(login_pass).fetchall()
+            print(login_password)
+
+            ## This equality will throw an error if the database is NOT loaded
+            if login_password[0][0] == entered_password:
+                fetch_name = "SELECT a.name FROM Users a WHERE userid ='{}' AND email = '{}'".format(userid,email)
+                name = db.session.execute(fetch_name).fetchall()
+                
+                ##Updates Session
+                session['name'] = name[0][0]
+                session['userid'] = userid
+                session['password'] = login_password[0][0]
+                session['email'] = email
+
+                user_role = get_user_role(userid)
+
+                session['user_role'] = user_role
+                user_role = user_role.split('/')
+
+                ## Handles panel page redirection
+                user_role = user_role.split('/')
+                
+                session['panel'] = panel_filler(user_role,userid)
+
+                if 'po' in user_role:
+                    return redirect("/po_home")
+                elif 'ptct' in user_role:
+                    return redirect("/pt_home")
+                elif 'ftct' in user_role:
+                    return redirect("/ft_home")
+                else: 
+                    return redirect("/registration")
+            else:
+                ## Need to think how to reset the page and tell user password is wrong
+                return redirect("/reset")
+    return render_template("login.html",form = form)
+
+@view.route('/logout')
+def render_logout_page():
+    session.pop('userid',None)
+    return redirect('/')
+
+@view.route("/privileged-page", methods=["GET"])
+@login_required
+def render_privileged_page():
+    return "<h1>Hello, {}!</h1>".format(current_user.preferred_name or current_user.userid)
+
+@view.route("/reset",methods = ["GET"])
+def render_reset():
+    return "<h1>Hello</h1>\
+    <h2>Don't forget your userid or password!</h2>"
 
 
 @view.route("/settings/<userid>", methods =["GET","POST"])
@@ -197,8 +223,8 @@ def render_po_home():
     user_role = session['user_role']
     if 'po' not in user_role:
         return redirect('/pt_home')
-    #role_user = session['ftptpo]
-    # role_user = 1
+    #role_user = session['user_role']
+    role_user = 'po'
     ## completed transactions
     ct = db.session.query(func.pastTransactions('{}'.format(userid))).all()
 
@@ -224,7 +250,7 @@ def render_po_home():
         return redirect('/search/{}/{}'.format(start_date,end_date))
 
     for row in data:
-        href = "/booking/"+ '/'.join(row[0][1:-1].split(","))
+        href = "\"/booking/"+ '/'.join(row[0][1:-1].split(",")) + '"'
         new = row[0][1:-1].split(",")
         new.append(href)
         print(new)
@@ -235,6 +261,9 @@ def render_po_home():
         new = item[0][1:-1].split(",")
         new.append(href)
         comp_trans.append(dict(zip(('pet_name','userid','start_date','end_date','dead','hrefstring'), new))) 
+    
+    session['panel'] = panel_filler(user_role,userid)
+    panel = session["panel"]
 
     return render_template("/5_PO_home.html",form = form, \
                                             name = name, \
@@ -242,9 +271,9 @@ def render_po_home():
                                             hp = hp,\
                                             email = email,\
                                             comp_trans = comp_trans,\
-                                            ftpt = user_role
+                                            ftpt = user_role,\
+                                            panel = panel
                                             )
-
 
 @view.route("/pt_home",methods=["GET", "POST"])
 def render_pt_home():
@@ -348,3 +377,10 @@ def render_review_rating(pn,ct,sd,ed,d):
     if 'userid' not in session:
         return redirect('/login')
     return render_template("/11_review_rating.html")
+
+
+@view.route("/transactions/<userid>",methods = ["GET","POST"])
+def render_transactions_page(userid):
+    if 'userid' not in session:
+        return redirect('/login')
+    return render_template("/9_all_transactions.html")
