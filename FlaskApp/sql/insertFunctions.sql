@@ -1,6 +1,6 @@
---TODO: Caretaker cannot look after his/her own pet. implement as Trigger?
--- Edit functions for writereview/rating: can only be done after transaction is completed
+-- CRONJOB TO MARK TRANSACTIONS AS COMPLETED
 -- fn to find trans_pr, for use in applyBooking
+--TRIGGER FOR PART TIME PET INSERTION, PRICE OVER BASE PRICE
 
 -- Page 1
 CREATE OR REPLACE FUNCTION login(username VARCHAR, pw VARCHAR)
@@ -164,6 +164,25 @@ LANGUAGE plpgsql;
 
 
 -- Page 5
+
+CREATE OR REPLACE FUNCTION find_hp(userid VARCHAR)
+RETURNS INTEGER AS
+$func$
+BEGIN
+  RETURN(SELECT u.hp FROM Users u WHERE u.userid = userid);
+END;
+$func$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION find_pets(userid VARCHAR)
+RETURNS TABLE (pet_name VARCHAR) AS
+$func$
+BEGIN
+  RETURN QUERY(SELECT p.pet_name FROM Pet p WHERE p.po_userid = userid);
+END;
+$func$
+LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION po_upcoming_bookings(userid VARCHAR)
 RETURNS TABLE (pet_name VARCHAR, ct_userid VARCHAR, start_date DATE, end_date DATE, status VARCHAR) AS
 $func$
@@ -296,6 +315,58 @@ END;
 $func$
 LANGUAGE plpgsql;
 
+
+
+-- Page 7
+CREATE OR REPLACE FUNCTION find_pettype(userid VARCHAR, petname VARCHAR)
+RETURNS VARCHAR AS
+$func$
+BEGIN
+  RETURN (SELECT p.pet_type FROM Pet p WHERE p.po_userid = userid AND p.pet_name = petname AND dead = 0);
+END;
+$func$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION find_specreq(userid VARCHAR)
+RETURNS VARCHAR AS
+$func$
+BEGIN
+  RETURN (SELECT u.name FROM Users u WHERE u.userid = userid);
+END;
+$func$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION find_name(userid VARCHAR, petname VARCHAR)
+RETURNS VARCHAR AS
+$func$
+BEGIN
+  RETURN (SELECT p.spec_req FROM Pet p WHERE p.po_userid = userid AND p.pet_name = petname AND dead = 0);
+END;
+$func$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION find_rate(userid VARCHAR, pettype VARCHAR)
+RETURNS FLOAT4 AS
+$func$
+BEGIN
+  IF (SELECT ct.full_time FROM Caretaker ct WHERE ct.ct_userid = userid) THEN
+    RETURN (SELECT ptype.price FROM Pet_Type ptype WHERE ptype.pet_type = pettype);
+  ELSE
+    RETURN (SELECT ptvp.price FROM PT_validpet ptvp WHERE ptvp.ct_userid = userid AND ptvp.pet_type = pettype);
+  END IF;
+END;
+$func$
+LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION find_card(userid VARCHAR)
+RETURNS INTEGER AS
+$func$
+BEGIN
+  RETURN (COALESCE(SELECT po.credit FROM Pet_Owner po WHERE po.po_userid = userid, 0));
+END;
+$func$
+LANGUAGE plpgsql;
 
 -- Page 8
 CREATE OR REPLACE PROCEDURE applyBooking (pouid VARCHAR, petname VARCHAR, ctuid VARCHAR, sd DATE, ed DATE, price FLOAT, payment_op VARCHAR) AS
@@ -623,7 +694,6 @@ RETURNS TRIGGER AS
 $$ BEGIN
   DROP TABLE IF EXISTS leave_records;
   DROP TABLE IF EXISTS days_avail;
-  
   CREATE TEMPORARY TABLE leave_records AS
   (SELECT ftl.leave_sd, ftl.leave_ed FROM FT_Leave ftl WHERE NEW.ct_userid = ftl.ct_userid); -- Has all leave records for the user being inserted
 
@@ -633,10 +703,8 @@ $$ BEGIN
   END IF; -- Disallow leave application if caretaker would already be on leave
   
   INSERT INTO leave_records VALUES (NEW.leave_sd, NEW.leave_ed); -- Adding the newly-applied-for leave into leave_records
-  
   INSERT INTO leave_records VALUES (CAST(CONCAT(CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS VARCHAR),'-01-01') AS DATE), CAST(CONCAT(CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS VARCHAR),'-01-01') AS DATE));
   INSERT INTO leave_records VALUES (CAST(CONCAT(CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS VARCHAR),'-12-31') AS DATE), CAST(CONCAT(CAST(EXTRACT(YEAR FROM CURRENT_DATE) AS VARCHAR),'-12-31') AS DATE));
-  
   
   CREATE TEMPORARY TABLE days_avail AS
   SELECT LEAD(lr.leave_sd,1) OVER (ORDER BY leave_sd ASC) - lr.leave_ed AS diff
@@ -644,21 +712,16 @@ $$ BEGIN
   WHERE EXTRACT(YEAR FROM CURRENT_DATE) = EXTRACT(YEAR FROM lr.leave_sd)
   ORDER BY lr.leave_sd ASC; -- Calculates days between consecutive leaves, including number of days since start of year/to end of year, and the leave about to be inserted
 
-
   IF NOT ( ((SELECT COUNT(*) FROM days_avail WHERE diff >= 150) = 2) OR ((SELECT COUNT(*) FROM days_avail WHERE diff >= 300) = 1) ) THEN
     RAISE EXCEPTION 'You must work 2x150 days a year';
   END IF; -- If the inserted leave results in the constraint of 2x150 days working being unfulfilled, raise exception, which interrupts the insert
-  
   RETURN NEW;
 END;
 $$
 LANGUAGE plpgsql;
-
 DROP TRIGGER IF EXISTS enforce_ft_avail ON FT_Leave;
-
 CREATE TRIGGER enforce_ft_avail BEFORE INSERT ON FT_Leave
 FOR EACH ROW EXECUTE PROCEDURE trigger_ft_leave_check();
-
 
 
 
@@ -668,22 +731,19 @@ $$ DECLARE
     baseprice FLOAT4;
 BEGIN
   baseprice = (SELECT price FROM Pet_Type WHERE pet_type = NEW.pet_type); -- Stores the new prices for each pet type that was updated
-  
   UPDATE PT_validpet
   SET price = baseprice
   WHERE (PT_validpet.ct_userid, PT_validpet.pet_type) IN(
   SELECT pt.ct_userid,pt.pet_type FROM PT_validpet pt INNER JOIN Pet_Type base ON pt.pet_type = base.pet_type
   WHERE pt.price < base.price);  -- Increase prices set by Parttime Caretakers if they would fall below this new price
-
   RETURN NULL;
 END;
 $$
 LANGUAGE plpgsql;
-
 DROP TRIGGER IF EXISTS admin_changed_price ON Pet_Type;
-
 CREATE TRIGGER admin_changed_price AFTER UPDATE ON Pet_Type
 FOR EACH ROW EXECUTE PROCEDURE trigger_price_check();
+
 
 
 CREATE OR REPLACE FUNCTION trigger_pending_check()
@@ -701,9 +761,7 @@ $$ BEGIN
 END;
 $$
 LANGUAGE plpgsql;
-
 DROP TRIGGER IF EXISTS cancel_pending_bids ON Looking_After;
-
 CREATE TRIGGER cancel_pending_bids AFTER UPDATE OR INSERT ON Looking_After
 FOR EACH ROW EXECUTE PROCEDURE trigger_pending_check();
 
@@ -727,8 +785,41 @@ $$ BEGIN
 END;
 $$
 LANGUAGE plpgsql;
-
 DROP TRIGGER IF EXISTS overwrite_overlapping_avail ON PT_Availability;
-
 CREATE TRIGGER overwrite_overlapping_avail BEFORE UPDATE OR INSERT ON PT_Availability
 FOR EACH ROW EXECUTE PROCEDURE trigger_pt_avail_overlap_check();
+
+
+
+CREATE OR REPLACE FUNCTION trigger_check_pet_owned()
+RETURNS TRIGGER AS
+$$ BEGIN
+-- Stop caretakers from taking care of their own pet
+  IF NEW.po_userid = NEW.ct_userid THEN
+    RAISE EXCEPTION 'You cannot care for your own pet';
+  END IF;
+  RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS disallow_ct_selfpet ON Looking_After;
+CREATE TRIGGER disallow_ct_selfpet BEFORE UPDATE OR INSERT ON Looking_After
+FOR EACH ROW EXECUTE PROCEDURE trigger_check_pet_owned();
+
+
+
+CREATE OR REPLACE FUNCTION trigger_allow_review()
+RETURNS TRIGGER AS
+$$ BEGIN
+-- Allow review to be written only after transaction completed
+  IF NEW.po_userid = NEW.ct_userid THEN
+    RAISE EXCEPTION 'You cannot care for your own pet';
+  END IF;
+  RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS review_after_completion ON Looking_After;
+CREATE TRIGGER review_after_completion BEFORE UPDATE OR INSERT ON Looking_After
+FOR EACH ROW EXECUTE PROCEDURE trigger_allow_review();
+-- Edit functions for writereview/rating: can only be done after transaction is completed
