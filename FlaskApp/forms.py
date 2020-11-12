@@ -123,42 +123,57 @@ class SearchDate(FlaskForm):
 #    current_password = PasswordField('Current Password', [val])
 
 class AddFT(FlaskForm):
+    def one_selected(form, field):
+        if not (form.po_checkbox.data or form.ct_checkbox.data):
+            raise ValidationError('At least one role has to be selected!')
     userid = StringField(
         label='Username',
         validators=[InputRequired()],
-        render_kw={'placeholder': 'Full-time_Employee_Username'}
+        render_kw={'placeholder': 'Employee_Username'}
     )
     name = StringField(
         label = 'Name',
         validators = [InputRequired(), is_valid_name],
-        render_kw={'placeholder': 'Full-time_Employee_Name'}
+        render_kw={'placeholder': 'Employee_Name'}
     )
     email = StringField(
         label='Email',
         validators=[InputRequired(), Email(message = 'Invalid email')],
-        render_kw={'placeholder': 'Full-time_Employee_Email'}
+        render_kw={'placeholder': 'Employee_Email'}
     )
     password = PasswordField(
         label='Password',
         validators=[InputRequired()],
-        render_kw={'placeholder': 'Full-time_Employee_Password'}
+        render_kw={'placeholder': 'Employee_Password'}
     )
     address = StringField(
         label='Address',
         validators=[InputRequired()],
-        render_kw={'placeholder': 'Full-time_Employee_Address'}
+        render_kw={'placeholder': 'Employee_Address'}
     )
     postal = StringField(
         label = 'Postal Code',
         validators = [InputRequired()],
-        render_kw={'placeholder': 'Full-time_Employee_Postal Code'}
+        render_kw={'placeholder': 'Employee_Postal Code'}
     )
     hp = StringField(
         label='Handphone Number',
         validators=[InputRequired()],
-        render_kw={'placeholder': 'Full-time_Employee_Handphone Number'}
+        render_kw={'placeholder': 'Employee_Handphone Number'}
     )
-    poct = MultiCheckboxField('Choose type',
-                                choices = [(1,'Pet Owner'),(2,'Caretaker')],
-                                coerce = int)
+
+    poct_label = Label(
+        field_id='poct_label',
+        text = 'I\'m signing up as a...'
+    )
+    po_checkbox = BooleanField(
+        label='Pet Owner',
+        validators=[one_selected],
+        # render_kw={'placeholder': 'Pet Owner'}
+    )
+    ct_checkbox = BooleanField(
+        label='Care Taker',
+        validators=[one_selected],
+        # render_kw={'placeholder': 'Pet Owner'}
+    )
     submit = SubmitField("Sign Up")

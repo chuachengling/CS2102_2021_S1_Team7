@@ -417,10 +417,6 @@ def render_addFT():
         hp = form.hp.data
         podata = form.po_checkbox.data
         ctdata = form.ct_checkbox.data
-        session['newft_userid'] = userid
-        session['newft_name'] = name 
-        session['newft_email'] = email 
-        session['newft_password'] = password
 
         check_user = "SELECT * FROM Users WHERE userid = '{}'".format(userid)
         exists_user = db.session.execute(check_user).fetchone()
@@ -452,6 +448,6 @@ def render_addFT():
             roles += 'ftct'
         session['user_role'] = roles
         session['panel'] = panel_filler(roles,userid)
-        return render_template("17_admin_home.html")
-    return render_template("addFT.html", form=form)
+        return redirect("/admin_home.html")
+    return render_template("18_addFT.html", form=form)
 
