@@ -404,3 +404,54 @@ def render_PO_confirmation(userid,pn, ct, sd, ed, d):
     mthd = db.session.query(func.find_card('{}'.format(userid))).all()[0][0]
     return render_template("/7_PO_confirmation.html", po_name = po_name, po_hp = hp, petname = petname, pettype = pettype, special_req = special_req, ct_name = ct_name, ct_hp = ct_hp, diff = diff, rate = rate, price = price, mthd = mthd)
 
+@view.route("/admin/AddFT", methods = ["GET", "POST"])
+def render_addFT():
+    form = AddFT()
+    if form.validate_on_submit():
+        userid = form.userid.data
+        name = form.name.data
+        password = form.password.data
+        email = form.email.data
+        postal = form.postal.data
+        address = form.address.data
+        hp = form.hp.data
+        podata = form.po_checkbox.data
+        ctdata = form.ct_checkbox.data
+        session['newft_userid'] = userid
+        session['newft_name'] = name 
+        session['newft_email'] = email 
+        session['newft_password'] = password
+
+        check_user = "SELECT * FROM Users WHERE userid = '{}'".format(userid)
+        exists_user = db.session.execute(check_user).fetchone()
+        check_email = "SELECT * FROM Users WHERE email = '{}'".format(email)
+        exists_email = db.session.execute(check_email).fetchone()
+        if exists_user:
+            form.userid.errors.append("{} is already in use.".format(userid))
+        if exists_email:
+            form.email.errors.append("{} is already in use.".format(email))
+        query1 = "INSERT INTO Accounts(userid,password) VALUES ('{}', '{}')".format(userid,password)
+        db.session.execute(query1)
+        db.session.commit()
+        query2 = "INSERT INTO Users(userid, name, postal,address,hp, email) VALUES ('{}', '{}', '{}','{}', '{}', '{}')"\
+            .format(userid,name,postal,address,hp,email)
+        db.session.execute(query2)
+        db.session.commit()
+        roles = ''
+        if podata:
+            query = "INSERT INTO Pet_Owner(po_userid) VALUES ('{}')".format(userid)
+            db.session.execute(query)
+            db.session.commit()
+            roles += 'po'
+        if ctdata:
+            query = "INSERT INTO Caretaker(ct_userid, full_time) VALUES ('{}')".format(userid, TRUE)
+            db.session.execute(query)
+            db.session.commit()
+            if roles:
+                roles += '/'
+            roles += 'ftct'
+        session['user_role'] = roles
+        session['panel'] = panel_filler(roles,userid)
+        return render_template("17_admin_home.html")
+    return render_template("addFT.html", form=form)
+

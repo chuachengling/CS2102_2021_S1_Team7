@@ -121,3 +121,44 @@ class SearchDate(FlaskForm):
 
 #class PasswordResetForm(FlaskForm):
 #    current_password = PasswordField('Current Password', [val])
+
+class AddFT(FlaskForm):
+    userid = StringField(
+        label='Username',
+        validators=[InputRequired()],
+        render_kw={'placeholder': 'Full-time_Employee_Username'}
+    )
+    name = StringField(
+        label = 'Name',
+        validators = [InputRequired(), is_valid_name],
+        render_kw={'placeholder': 'Full-time_Employee_Name'}
+    )
+    email = StringField(
+        label='Email',
+        validators=[InputRequired(), Email(message = 'Invalid email')],
+        render_kw={'placeholder': 'Full-time_Employee_Email'}
+    )
+    password = PasswordField(
+        label='Password',
+        validators=[InputRequired()],
+        render_kw={'placeholder': 'Full-time_Employee_Password'}
+    )
+    address = StringField(
+        label='Address',
+        validators=[InputRequired()],
+        render_kw={'placeholder': 'Full-time_Employee_Address'}
+    )
+    postal = StringField(
+        label = 'Postal Code',
+        validators = [InputRequired()],
+        render_kw={'placeholder': 'Full-time_Employee_Postal Code'}
+    )
+    hp = StringField(
+        label='Handphone Number',
+        validators=[InputRequired()],
+        render_kw={'placeholder': 'Full-time_Employee_Handphone Number'}
+    )
+    poct = MultiCheckboxField('Choose type',
+                                choices = [(1,'Pet Owner'),(2,'Caretaker')],
+                                coerce = int)
+    submit = SubmitField("Sign Up")

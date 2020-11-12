@@ -44,7 +44,7 @@ CREATE TABLE Pet_Owner (
 
 CREATE TABLE Caretaker (
 	ct_userid 	VARCHAR PRIMARY KEY REFERENCES Users (userid) ON UPDATE CASCADE,
-	bank_acc 	CHAR(10) NOT NULL,
+	bank_acc 	CHAR(10) DEFAULT NULL,
 	full_time 	BOOLEAN DEFAULT FALSE
 );
 
