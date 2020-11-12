@@ -384,3 +384,23 @@ def render_transactions_page(userid):
     if 'userid' not in session:
         return redirect('/login')
     return render_template("/9_all_transactions.html")
+
+@view.route("/PO_confirmation/<userid>/<pn>/<ct>/<sd>/<ed>/<d>", methods = ["GET", "POST"])
+def render_PO_confirmation(userid,pn, ct, sd, ed, d):
+    if 'userid' not in session:
+        return redirect('/login')
+    po_name = session['name']
+    po_hp = db.session.query(func.find_hp('{}'.format(userid))).all()[0][0]
+    petname = session['pet_name']
+    pettype = db.session.query(func.find_pettype('{}'.format(userid, pet_name))).all()[0][0]
+    special_req = db.session.query(func.find_specreq('{}'.format(userid, pet_name))).all()[0][0]
+    ct_name = db.session.query(func.find_name('{}'.format(ct))).all()[0][0]
+    ct_hp = db.session.query(func.find_hp('{}'.format(ct))).all()[0][0]
+    sd = session["start_date"]
+    ed = session["end_date"]
+    diff = ed - sd + 1
+    rate = db.session.query(func.find_rate('{}'.format(ct, pettype))).all()[0][0]
+    price = rate * diff
+    mthd = db.session.query(func.find_card('{}'.format(userid))).all()[0][0]
+    return render_template("/7_PO_confirmation.html", po_name = po_name, po_hp = hp, petname = petname, pettype = pettype, special_req = special_req, ct_name = ct_name, ct_hp = ct_hp, diff = diff, rate = rate, price = price, mthd = mthd)
+

@@ -64,20 +64,20 @@ Licence URI: https://www.os-templates.com/template-terms
     <article>
         <h2 class="heading">Confirmation of booking request</h2>
         <br>        
-        <p>Summary of Details:</p>
-        <p>Pet Owner Name: Nikole </p>
-        <p>Pet Owner Phone Number: XXXX XXXX </p>
+        <p>Summary of Details:</p> 
+        <p>Pet Owner Name: {{ po_name }} </p> 
+        <p>Pet Owner Phone Number: {{ po_hp }} </p> 
         <br>         
-        <p>Pet Name: XXXXX </p>
-        <p>Pet Type: XXXXX </p>
-        <p>Special Request: XXXXXXXXXX </p> 
+        <p>Pet Name: {{ petname }} </p> 
+        <p>Pet Type: {{ pettype }} </p> 
+        <p>Special Request: {{ special_req }} </p> 
         <br> 
-        <p>Care Taker Name: Chua Cheng Ling</p>
-        <p>Care Taker Phone Number: XXXX XXXX </p>
-        <p>Start Date: XX/XX/XX </p>
-        <p>End Date: XX/XX/XX </p>
-        <p>Price: XX days * $_rate_ = $XX </p> 
-        <p>Payment Method: XXX </p> 
+        <p>Care Taker Name: {{ ct_name }} </p>
+        <p>Care Taker Phone Number: {{ ct_hp }}</p>
+        <p>Start Date: {{ sd }}</p>
+        <p>End Date: {{ ed }} </p>
+        <p>Price: {{ diff }} days * $ {{ rate }} = $ {{ price }} </p> 
+        <p>Payment Method: {% if mthd == 0 %} Cash {% else %} Credit Card</p> 
     </article>
     
     <article>
