@@ -1,16 +1,17 @@
--- CRONJOB TO MARK TRANSACTIONS AS COMPLETED
--- fn to find trans_pr, for use in applyBooking
---TRIGGER FOR PART TIME PET INSERTION, PRICE OVER BASE PRICE
-
 -- Page 1
 CREATE OR REPLACE FUNCTION login(username VARCHAR, pw VARCHAR)
 RETURNS BOOLEAN AS
 $func$
 BEGIN
+--Mark transaction as completed if end date is over
+  UPDATE Looking_After la
+  SET la.status = 'Completed'
+  WHERE la.status = 'Accepted' AND la.end_date > CURRENT_DATE;
+
   RETURN(SELECT EXISTS(
     SELECT 1 FROM Accounts a
-    WHERE login.username = a.userid AND login.pw = a.password
-      ));
+    WHERE login.username = a.userid AND login.pw = a.password)
+    );
 END;
 $func$
 LANGUAGE plpgsql;
@@ -169,7 +170,7 @@ CREATE OR REPLACE FUNCTION find_hp(userid VARCHAR)
 RETURNS INTEGER AS
 $func$
 BEGIN
-  RETURN(SELECT u.hp FROM Users u WHERE u.userid = userid);
+  RETURN(SELECT u.hp FROM Users u WHERE u.userid = find_hp.userid);
 END;
 $func$
 LANGUAGE plpgsql;
@@ -178,18 +179,18 @@ CREATE OR REPLACE FUNCTION find_pets(userid VARCHAR)
 RETURNS TABLE (pet_name VARCHAR) AS
 $func$
 BEGIN
-  RETURN QUERY(SELECT p.pet_name FROM Pet p WHERE p.po_userid = userid);
+  RETURN QUERY(SELECT p.pet_name FROM Pet p WHERE p.po_userid = find_pets.userid AND p.dead = 0);
 END;
 $func$
 LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION po_upcoming_bookings(userid VARCHAR)
-RETURNS TABLE (pet_name VARCHAR, ct_userid VARCHAR, start_date DATE, end_date DATE, status VARCHAR) AS
+RETURNS TABLE (pet_name VARCHAR, ct_userid VARCHAR, start_date DATE, end_date DATE, status VARCHAR,dead INTEGER) AS
 $func$
 BEGIN
   RETURN QUERY(
- SELECT b.pet_name,c.name,b.start_date,b.end_date,b.status FROM(
-  SELECT a.pet_name, a.ct_userid, a.start_date, a.end_date, a.status FROM Looking_After a
+ SELECT b.pet_name,c.name,b.start_date,b.end_date,b.status,b.dead FROM(
+  SELECT a.pet_name, a.ct_userid, a.start_date, a.end_date, a.status, a.dead FROM Looking_After a
  WHERE a.po_userid = po_upcoming_bookings.userid AND a.status != 'Rejected' AND a.status != 'Completed') AS b
   INNER JOIN 
   (SELECT u.name,u.userid FROM Users u ) AS c ON c.userid = b.ct_userid
@@ -197,7 +198,6 @@ BEGIN
 END;
 $func$
 LANGUAGE plpgsql;
---
 
 
 CREATE OR REPLACE FUNCTION explode_date (sd DATE, ed DATE)
@@ -239,7 +239,7 @@ BEGIN
   )EXCEPT(SELECT exp.ctuser FROM explode_date(sd, ed) exp -- REMOVE PTCT who are fully booked
   GROUP BY exp.ctuser, exp.day
   HAVING COUNT(*) >= CASE -- Using >=4 as good rating
-                      WHEN (SELECT avg(la.rating) FROM Looking_After la WHERE la.ct_userid = exp.ctuser AND (rating = 'Accepted' OR rating = 'Pending')) >= 4 THEN 5
+                      WHEN (SELECT avg(la.rating) FROM Looking_After la WHERE la.ct_userid = exp.ctuser AND (status = 'Accepted' OR status = 'Pending')) >= 4 THEN 5
                       ELSE 2
                     END)
   )UNION(
@@ -259,22 +259,20 @@ $func$
 LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION bidDetails (userid VARCHAR) 
---bid_search and bidDetails are used for page 6 output. so pg 6 will be sth like bidDetails(bidsearchuserid(petname, sd, ed))
---TODO FIX PRICE!!! Esp for pt
-RETURNS TABLE (name VARCHAR, avgrating FLOAT, price FLOAT) AS
+RETURNS TABLE (name VARCHAR, avgrating FLOAT8, price FLOAT4) AS
 $func$
 BEGIN
+--Output details for ONE userid
 RETURN QUERY(
     SELECT Users.name AS name, AVG(rating) AS avgrating, ftpt.price AS price
     FROM Users INNER JOIN Looking_After ON Users.userid = Looking_After.ct_userid
         INNER JOIN 
         (
-        SELECT pt.ct_userid AS ct_userid, pt.pet_type AS pet_type FROM PT_validpet pt
+        SELECT pt.ct_userid, pt.pet_type, pt.price FROM PT_validpet pt
         UNION
-        SELECT ft.ct_userid AS ct_userid, ft.pet_type AS pet_type FROM FT_validpet ft
+        SELECT ft.ct_userid, ft.pet_type, (SELECT price FROM Pet_Type WHERE Pet_Type.pet_type = ft.pet_type) FROM FT_validpet ft
         ) ftpt ON Users.userid = ftpt.ct_userid
     WHERE ftpt.userid = userid
-    GROUP BY ftpt.userid
     );
 END;
 $func$
@@ -301,7 +299,6 @@ LANGUAGE plpgsql;
 
 
 -- Page 6
---todo create function taking userid, display past ratings n reviews
 CREATE OR REPLACE FUNCTION caretakerReviewRatings (userid VARCHAR)
 RETURNS TABLE (review VARCHAR, rating FLOAT) AS
 $func$
@@ -322,25 +319,25 @@ CREATE OR REPLACE FUNCTION find_pettype(userid VARCHAR, petname VARCHAR)
 RETURNS VARCHAR AS
 $func$
 BEGIN
-  RETURN (SELECT p.pet_type FROM Pet p WHERE p.po_userid = userid AND p.pet_name = petname AND dead = 0);
+  RETURN (SELECT p.pet_type FROM Pet p WHERE p.po_userid = find_pettype.userid AND p.pet_name = find_pettype.petname AND p.dead = 0);
 END;
 $func$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION find_specreq(userid VARCHAR)
+CREATE OR REPLACE FUNCTION find_name(userid VARCHAR)
 RETURNS VARCHAR AS
 $func$
 BEGIN
-  RETURN (SELECT u.name FROM Users u WHERE u.userid = userid);
+  RETURN (SELECT u.name FROM Users u WHERE u.userid = find_name.userid);
 END;
 $func$
 LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION find_name(userid VARCHAR, petname VARCHAR)
+CREATE OR REPLACE FUNCTION find_specreq(userid VARCHAR, petname VARCHAR)
 RETURNS VARCHAR AS
 $func$
 BEGIN
-  RETURN (SELECT p.spec_req FROM Pet p WHERE p.po_userid = userid AND p.pet_name = petname AND dead = 0);
+  RETURN (SELECT p.spec_req FROM Pet p WHERE p.po_userid = find_specreq.userid AND p.pet_name = find_specreq.petname AND p.dead = 0);
 END;
 $func$
 LANGUAGE plpgsql;
@@ -349,10 +346,10 @@ CREATE OR REPLACE FUNCTION find_rate(userid VARCHAR, pettype VARCHAR)
 RETURNS FLOAT4 AS
 $func$
 BEGIN
-  IF (SELECT ct.full_time FROM Caretaker ct WHERE ct.ct_userid = userid) THEN
-    RETURN (SELECT ptype.price FROM Pet_Type ptype WHERE ptype.pet_type = pettype);
+  IF (SELECT ct.full_time FROM Caretaker ct WHERE ct.ct_userid = find_rate.userid) THEN
+    RETURN (SELECT ptype.price FROM Pet_Type ptype WHERE ptype.pet_type = find_rate.pettype);
   ELSE
-    RETURN (SELECT ptvp.price FROM PT_validpet ptvp WHERE ptvp.ct_userid = userid AND ptvp.pet_type = pettype);
+    RETURN (SELECT ptvp.price FROM PT_validpet ptvp WHERE ptvp.ct_userid = find_rate.userid AND ptvp.pet_type = find_rate.pettype);
   END IF;
 END;
 $func$
@@ -363,21 +360,35 @@ CREATE OR REPLACE FUNCTION find_card(userid VARCHAR)
 RETURNS INTEGER AS
 $func$
 BEGIN
-  RETURN (COALESCE(SELECT po.credit FROM Pet_Owner po WHERE po.po_userid = userid, 0));
+  RETURN (COALESCE((SELECT po.credit FROM Pet_Owner po WHERE po.po_userid = find_card.userid), 0));
 END;
 $func$
 LANGUAGE plpgsql;
 
 -- Page 8
-CREATE OR REPLACE PROCEDURE applyBooking (pouid VARCHAR, petname VARCHAR, ctuid VARCHAR, sd DATE, ed DATE, price FLOAT, payment_op VARCHAR) AS
+--fn to find trans_pr
+CREATE OR REPLACE FUNCTION what_trans_pr(ct_userid VARCHAR, pet_name VARCHAR, sd DATE, ed DATE)
+RETURNS FLOAT4 AS
 $func$
 BEGIN
+  RETURN((sd-ed+1)*find_rate(what_trans_pr.ct_userid, find_pettype(what_trans_pr.ct_userid, what_trans_pr.pet_name)));
+END;
+$func$
+LANGUAGE plpgsql;
+
+CREATE OR REPLACE PROCEDURE applyBooking (pouid VARCHAR, petname VARCHAR, ctuid VARCHAR, sd DATE, ed DATE, payment_op VARCHAR) AS
+$func$
+DECLARE
+  price FLOAT4;
+BEGIN
+  price := what_trans_pr(applyBooking.ctuid, applyBooking.petname, applyBooking.sd, applyBooking.ed);
+  
   IF (SELECT ct.full_time FROM Caretaker ct WHERE ct.ct_userid = applyBooking.ctuid) THEN
     INSERT INTO Looking_After (po_userid, ct_userid, pet_name, start_date, end_date, status, trans_pr, payment_op)
-    VALUES (applyBooking.pouid, applyBooking.ctuid, applyBooking.petname, applyBooking.sd, applyBooking.ed, 'Accepted', applyBooking.price, applyBooking.payment_op);
+    VALUES (applyBooking.pouid, applyBooking.ctuid, applyBooking.petname, applyBooking.sd, applyBooking.ed, 'Accepted', price, applyBooking.payment_op);
   ELSE
     INSERT INTO Looking_After (po_userid, ct_userid, pet_name, start_date, end_date, status, trans_pr, payment_op)
-    VALUES (applyBooking.pouid, applyBooking.ctuid, applyBooking.petname, applyBooking.sd, applyBooking.ed, 'Pending', applyBooking.price, applyBooking.payment_op);
+    VALUES (applyBooking.pouid, applyBooking.ctuid, applyBooking.petname, applyBooking.sd, applyBooking.ed, 'Pending', price, applyBooking.payment_op);
   END IF;
   
 END;
@@ -665,6 +676,17 @@ LANGUAGE plpgsql;
 
 
 -- Page 16
+
+CREATE OR REPLACE FUNCTION find_birthday(userid VARCHAR, petname VARCHAR)
+RETURNS DATE AS
+$func$
+BEGIN
+RETURN (SELECT p.birthday FROM Pet p WHERE p.po_userid = userid AND p.pet_name = petname AND p.dead = 0);
+END;
+$func$
+LANGUAGE plpgsql;
+
+
 CREATE OR REPLACE FUNCTION petprofile(userid VARCHAR, petname VARCHAR)
 RETURNS TABLE (pet_type VARCHAR, birthday DATE, spec_req VARCHAR) AS
 $func$
@@ -812,14 +834,30 @@ CREATE OR REPLACE FUNCTION trigger_allow_review()
 RETURNS TRIGGER AS
 $$ BEGIN
 -- Allow review to be written only after transaction completed
-  IF NEW.po_userid = NEW.ct_userid THEN
-    RAISE EXCEPTION 'You cannot care for your own pet';
+  IF NEW.review IS NULL OR NEW.status = 'Completed' THEN
+    RETURN NEW;
+  ELSE
+    RAISE EXCEPTION 'Transaction not completed, cannot write review';
   END IF;
-  RETURN NEW;
 END;
 $$
 LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS review_after_completion ON Looking_After;
 CREATE TRIGGER review_after_completion BEFORE UPDATE OR INSERT ON Looking_After
 FOR EACH ROW EXECUTE PROCEDURE trigger_allow_review();
--- Edit functions for writereview/rating: can only be done after transaction is completed
+
+
+CREATE OR REPLACE FUNCTION trigger_pt_price()
+RETURNS TRIGGER AS
+$$ BEGIN
+-- If attempting to update/insert pt price, make sure its above base price
+  IF NEW.price < (SELECT p.price FROM Pet_Type p WHERE p.pet_type = NEW.pet_type) THEN
+    NEW.price := (SELECT p.price FROM Pet_Type p WHERE p.pet_type = NEW.pet_type);
+  END IF;
+  RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+DROP TRIGGER IF EXISTS pt_min_price ON PT_validpet;
+CREATE TRIGGER pt_min_price BEFORE UPDATE OR INSERT ON PT_validpet
+FOR EACH ROW EXECUTE PROCEDURE trigger_pt_price();
