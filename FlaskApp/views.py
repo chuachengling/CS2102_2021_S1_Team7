@@ -154,9 +154,6 @@ def render_login_page():
 
                 session['user_role'] = user_role
                 user_role = user_role.split('/')
-
-                ## Handles panel page redirection
-                user_role = user_role.split('/')
                 
                 session['panel'] = panel_filler(user_role,userid)
 
