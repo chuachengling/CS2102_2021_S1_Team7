@@ -4,10 +4,11 @@ from __init__ import db, login_manager
 from forms import *
 from datetime import datetime, date, timedelta
 from sqlalchemy import func
-
+import csv
 
 view = Blueprint("view", __name__)
-#from tables import RecentBooking
+
+## Auxillary Functions
 
 ## Creates a dictionary that handles logic across all pages.
 
@@ -20,10 +21,10 @@ def panel_filler(user_role,userid):
     elif 'ftct' in user_role:
         panel['panel_ct'] = panel['panel_ct'] + '/ft_home'
     else: 
-        raise Exception('ValueError: There is not information on the user')
+        raise Exception('ValueError: There is no information on the user')
 
     panel['profile'] = panel['profile'] + userid
-    panel['all_transact'] = panel['all_transact'] + userid
+    panel['all_transact'] = panel['all_transact']
 
     return panel
                 
@@ -40,13 +41,8 @@ def get_user_role(userid):
         roles.append('ftct')
     return '/'.join(str(i) for i in roles)
 
-@login_manager.user_loader
-def load_user(userid):
-    user = "SELECT u.userid FROM Users u WHERE userid = '{}'".format(userid)
-    user = db.session.execute(user).fetchone()
-    return user or current_user 
 
-
+## Testing whether flaskapp is working (can delete)
 @view.route("/", methods=["GET"])
 def render_dummy_page():
     if 'userid' in session:
@@ -57,7 +53,7 @@ def render_dummy_page():
         You are not logged in <br><a href = '/login'></b> + \
       click here to log in</b></a>"
 
-
+## Page 1a Registration 1
 @view.route("/registration", methods=["GET", "POST"])
 def render_registration_page():
     form = RegistrationForm()
@@ -84,8 +80,12 @@ def render_registration_page():
             return redirect("/registration-2")
     return render_template("registration.html", form=form)
 
+## Page 2 Registration 2
+
 @view.route("/registration-2",methods=["GET", "POST", "PUT", "DELETE"])
 def render_setup_profile():
+    if 'userid' not in session:
+        return redirect('/registration')
     form = Registration2Form()
     userid = session['userid']
     name = session['name']
@@ -104,6 +104,9 @@ def render_setup_profile():
             .format(userid,name,postal,address,hp,email)
         db.session.execute(query2)
         db.session.commit()
+        session.pop('password')
+        session.pop('email')
+        session.pop('name')
         roles = ''
         if podata:
             query = "INSERT INTO Pet_Owner(po_userid) VALUES ('{}')".format(userid)
@@ -117,10 +120,11 @@ def render_setup_profile():
             if roles:
                 roles += '/'
             roles += 'ptct'
-        session['user_role'] = roles
         session['panel'] = panel_filler(roles,userid)
-        return redirect('/settings/{}'.format(userid))
+        return redirect('/settings')
     return render_template("registration-2.html",form = form)
+
+## Page 3 Login
 
 @view.route("/login", methods=["GET", "POST"])
 def render_login_page():
@@ -128,83 +132,152 @@ def render_login_page():
     userid = form.userid.data
     entered_password = form.password.data
     email = form.email.data 
-    if form.is_submitted():
-        print("userid entered:", form.userid.data)
-        print("password entered:", form.password.data)
     if form.validate_on_submit():
         exists_user = db.session.execute(func.login(userid,entered_password)).fetchall()  
         if exists_user:
             ## Checks if password is correct 
             login_pass ="SELECT a.password FROM Accounts a WHERE userid = '{}' AND password = '{}'".format(userid,entered_password)  ### Supposed to use function but currently function does not work. 
-            login_password = db.session.execute(login_pass).fetchall()
-            print(login_password)
+            login_password = db.session.execute(login_pass).fetchall()    
+            
+            ##Updates Session
+            session['userid'] = userid
+            user_role = get_user_role(userid)
 
-            ## This equality will throw an error if the database is NOT loaded
-            if login_password[0][0] == entered_password:
-                fetch_name = "SELECT a.name FROM Users a WHERE userid ='{}' AND email = '{}'".format(userid,email)
-                name = db.session.execute(fetch_name).fetchall()
-                
-                ##Updates Session
-                session['name'] = name[0][0]
-                session['userid'] = userid
-                session['password'] = login_password[0][0]
-                session['email'] = email
+            ## Handles panel page redirection                
+            session['panel'] = panel_filler(user_role,userid)
 
-                user_role = get_user_role(userid)
-
-                session['user_role'] = user_role
-                user_role = user_role.split('/')
-
-                ## Handles panel page redirection
-                user_role = user_role.split('/')
-                
-                session['panel'] = panel_filler(user_role,userid)
-
-                if 'po' in user_role:
-                    return redirect("/po_home")
-                elif 'ptct' in user_role:
-                    return redirect("/pt_home")
-                elif 'ftct' in user_role:
-                    return redirect("/ft_home")
-                else: 
-                    return redirect("/registration")
-            else:
-                ## Need to think how to reset the page and tell user password is wrong
-                return redirect("/reset")
+            if 'po' in user_role:
+                return redirect("/po_home")
+            elif 'ptct' in user_role:
+                return redirect("/pt_home")
+            elif 'ftct' in user_role:
+                return redirect("/ft_home")
+            else: ##TODO admin redirect
+                return redirect("/registration")    
+        else:
+            ## Need to think how to reset the page and tell user password is wrong
+            return redirect("/login")
     return render_template("login.html",form = form)
 
-@view.route('/logout')
-def render_logout_page():
-    session.pop('userid',None)
-    return redirect('/')
+## Page 4 edit settings page
 
-@view.route("/privileged-page", methods=["GET"])
-@login_required
-def render_privileged_page():
-    return "<h1>Hello, {}!</h1>".format(current_user.preferred_name or current_user.userid)
-
-@view.route("/reset",methods = ["GET"])
-def render_reset():
-    return "<h1>Hello</h1>\
-    <h2>Don't forget your userid or password!</h2>"
-
-
-@view.route("/settings/<userid>", methods =["GET","POST"])
-def render_settings(userid):
+@view.route("/settings", methods =["GET","POST"])
+def render_settings():
     if 'userid' not in session:
         return redirect('login')
-    user_role = session['user_role']
-    return render_template("4_settings_profile.html")
 
+    userid = session['userid']
+    user_role = get_user_role(userid)
+    name = db.session.query(func.find_name(userid)).all()[0][0]
 
-@view.route("/profile/<nickname>",methods=["GET", "POST"])
-def render_profile(nickname):
+    personal_form = PersonalUpdateForm()
+    add_pet_form = AddPetForm()
+    finance_form = FinanceUpdateForm()
+
+    if 'handphone_field' in request.form:
+        if personal_form.handphone_field.data:
+            hp = personal_form.handphone_field.data
+            if all('0' <= i <= '9' for i in hp) and len(hp) == 8:
+                query = 'UPDATE Users SET hp = \'{}\' WHERE userid = \'{}\''.format(hp, userid)
+                db.session.execute(query)
+                db.session.commit()
+        if personal_form.address_field.data:
+            query = 'UPDATE Users SET address = \'{}\' WHERE userid = \'{}\''.format(personal_form.address_field.data, userid)
+            db.session.execute(query)
+            db.session.commit()
+        if personal_form.password_field.data:
+            query = 'UPDATE Accounts SET password = \'{}\' WHERE userid = \'{}\''.format(personal_form.password_field.data, userid)
+            db.session.execute(query)
+            db.session.commit()
+        return redirect('/settings')
+    elif 'petname_field' in request.form:
+        # TODO: Check if name already exists in there
+        db.session.execute(func.addPOpets(userid, add_pet_form.petname_field.data, add_pet_form.dob_field.data, add_pet_form.special_field.data, add_pet_form.pettype_field.data))
+        db.session.commit()
+        return redirect('/settings')
+    elif 'bank_field' in request.form:
+        if finance_form.bank_field.data:
+            bank = finance_form.bank_field.data
+            if all('0' <= i <= '9' for i in bank) and len(bank) == 10:
+                db.session.execute(func.editBank(userid, bank))
+                db.session.commit()
+        if finance_form.credit_field.data:
+            credit = finance_form.credit_field.data
+            if all('0' <= i <= '9' for i in credit) and len(credit) == 16:
+                db.session.execute(func.editCredit(userid, credit))
+                db.session.commit()
+        pairs = [('Cat', finance_form.cat_rate), ('Dog', finance_form.dog_rate), ('Rabbit', finance_form.rabbit_rate), ('Guinea pig', finance_form.guinea_rate),
+            ('Hamster', finance_form.hamster_rate), ('Gerbil', finance_form.gerbil_rate), ('Mouse', finance_form.mouse_rate), ('Chinchilla', finance_form.chinchilla_rate)]
+        for animal, field in pairs:
+            if field.data:
+                try:
+                    price = float(field.data)
+                except:
+                    continue
+                if 'ptct' in user_role:
+                    db.session.execute(func.deletePTPetsICanCare(userid, animal))
+                    if price > 0:
+                        db.session.execute(func.addPTPetsICanCare(userid, animal, price))
+                elif 'ftct' in user_role:
+                    db.session.execute(func.deleteFTPetsICanCare(userid, animal))
+                    if price > 0:
+                        db.session.execute(func.addFTPetsICanCare(userid, animal))
+                db.session.commit()
+
+        return redirect('/settings')
+
+    all_pets = db.session.query(func.all_POpets_deets(userid)).all() # (pet_name VARCHAR, pet_type VARCHAR, dob DATE, special_req VARCHAR)
+    table = list()
+    for row in all_pets:
+        d = {}
+        new = list(csv.reader([row[0][1:-1]]))[0]
+        d["pn"] = new[0]
+        d["p_type"] = new[1]
+        d["dob"] = new[2]
+        d["special_req"] = new[3]
+        href = "/settings/remove_pet/" + new[0]
+        d["href"] = href
+        table.append(d)
+    return render_template("4_settings_profile.html",
+        name = name,
+        table = table,
+        personal_form = personal_form,
+        add_pet_form = add_pet_form,
+        finance_form = finance_form,
+        is_po = 'po' in user_role,
+        is_ptct = 'ptct' in user_role,
+        is_ftct = 'ftct' in user_role
+    )
+
+@view.route("/deleteacc")
+def render_delete():
     if 'userid' not in session:
-        return redirect('/login')
-    
-    return render_template("profile.html")
+        return redirect('login') 
+    db.session.execute(func.deleteacc(session['userid']))
+    db.session.commit()
+    return redirect('/login')
 
-@view.route("/po_home",methods=["GET", "POST"])
+
+@view.route("/settings/remove_pet/<pn>", methods = ["GET", "POST"])
+def render_remove_pet(pn):
+    if 'userid' not in session:
+        return redirect('login') ##TODO check relative URL path
+    userid = session['userid']
+    db.session.execute(func.removePOpet(userid, pn))
+    db.session.commit()
+    return redirect('/settings')
+
+# This may be useless
+# @view.route("/profile/<nickname>",methods=["GET", "POST"])
+# def render_profile(nickname):
+#     if 'userid' not in session:
+#         return redirect('/login')
+#     return render_template("profile.html")
+
+
+## Page 5 Pet owner home screen
+
+@view.route("/po_home/",methods=["GET", "POST"])
 def render_po_home():
     
     ## redirects if the person is not logged in
@@ -212,22 +285,11 @@ def render_po_home():
         return redirect('/login')
     
     ## initialising information required in web page
-    name = session['name']
     userid = session['userid']
+    name = db.session.query(func.find_name(userid)).all()[0][0]
     data = db.session.query(func.po_upcoming_bookings('{}'.format(userid))).all()
-    email = session['email']
-    hp = db.session.query(func.find_hp('{}'.format(userid))).all()[0][0]
-    if 'user_role' not in session:
-        user_role = get_user_role(userid)
-        session['user_role'] = user_role
-    user_role = session['user_role']
-    if 'po' not in user_role:
-        return redirect('/pt_home')
-    #role_user = session['user_role']
-    role_user = 'po'
     ## completed transactions
     ct = db.session.query(func.pastTransactions('{}'.format(userid))).all()
-
     ## init display items
     table = []
     comp_trans = []
@@ -238,43 +300,416 @@ def render_po_home():
     pet = []
     pet_data = db.session.query(func.find_pets('{}'.format(userid))).all()
     form.pet_name.choices = [(i[0], i[0]) for i in pet_data]
-
     start_date = form.startdate_field.data
     end_date = form.enddate_field.data
     pet_select = form.pet_name.data
 
     if form.validate_on_submit():
-        session['start_date'] = start_date
-        session['end_date'] = end_date
-        session["pet_selected"] = pet_select
-        return redirect('/search/{}/{}'.format(start_date,end_date))
+        return redirect('/search/{}/{}/{}'.format(pet_select,start_date,end_date))
 
     for row in data:
-        href = "\"/booking/"+ '/'.join(row[0][1:-1].split(",")) + '"'
+        href = "/booking/" + '/'.join(row[0][1:-1].split(",")) 
         new = row[0][1:-1].split(",")
         new.append(href)
         print(new)
-        table.append(dict(zip(('pet_name', 'userid', 'start_date', 'end_date', 'status','dead',"hrefstring"), new)))
+        table.append(dict(zip(('pet_name','name', 'ct_userid', 'start_date', 'end_date', 'status','dead',"hrefstring"), new)))
 
     for item in ct:
         href = "/review_rating/"+ '/'.join(item[0][1:-1].split(","))
         new = item[0][1:-1].split(",")
         new.append(href)
-        comp_trans.append(dict(zip(('pet_name','userid','start_date','end_date','dead','hrefstring'), new))) 
+        comp_trans.append(dict(zip(('pet_name','name','ctuserid','start_date','end_date','dead','hrefstring'), new))) 
     
-    session['panel'] = panel_filler(user_role,userid)
     panel = session["panel"]
 
     return render_template("/5_PO_home.html",form = form, \
                                             name = name, \
                                             table = table, \
-                                            hp = hp,\
-                                            email = email,\
                                             comp_trans = comp_trans,\
-                                            ftpt = user_role,\
                                             panel = panel
                                             )
 
+## Page 6 Search Results for Pet Owner
+
+@view.route("/search/<pet_name>/<start_date>/<end_date>",methods=["GET", "POST"])
+def render_search(pet_name,start_date,end_date):
+    if 'userid' not in session:
+        return redirect('/login')
+    userid = session['userid']
+    search_result = db.session.query(func.bid_search(userid,pet_name,start_date,end_date)).all()
+    result = [i[0] for i in search_result]
+    store = []
+    for row in result:
+        biddetails = db.session.query(func.bidDetails(row,userid,pet_name)).all()[0]
+        new = biddetails[0][1:-1].split(",")
+        hrefpast = "/ct_review/" + row
+        hrefbook = "/po_ar_booking/" + pet_name +"/"+ new[0] + "/" + start_date + "/" + end_date + "/" + "0"
+        new.append(hrefpast)
+        new.append(hrefbook)
+        store.append(dict(zip(('name','avg_rating','ppd','hrefpast','hrefbook'), new))) 
+    return render_template("/6_PO_search.html",search_result = search_result,\
+                                                store = store)
+
+
+## Page 7a Pet Owner Accept Reject booking NO CHAT
+@view.route("/po_ar_booking/<pn>/<ct>/<sd>/<ed>/<d>", methods = ["GET","POST"])
+def render_po_ar_booking(pn,ct,sd,ed,d):
+    if 'userid' not in session:
+        return redirect('/login')
+    userid = session['userid']
+
+    cancel_form = CancelForm()
+    confirm_form = ConfirmForm()
+
+    if cancel_form.cancel_field.data and cancel_form.validate_on_submit():
+        return redirect('/po_home')
+    
+    # cdebneyda | aneildy   | Monroty  |    0 | 2020-10-05 | 2020-10-05
+    # /po_ar_booking/Monroty/aneildy/2020-11-05/2020-11-05/0
+
+    po_name = db.session.query(func.find_name(userid)).all()[0][0]
+    po_hp = db.session.query(func.find_hp('{}'.format(userid))).all()[0][0]
+    pettype = db.session.query(func.find_pettype(userid, pn, d)).all()[0][0]
+    special_req = db.session.query(func.find_specreq(userid, pn, d)).all()[0][0]
+    ct_name = db.session.query(func.find_name('{}'.format(ct))).all()[0][0]
+    ct_hp = db.session.query(func.find_hp('{}'.format(ct))).all()[0][0]
+    diff = (date(*(int(i) for i in ed.split('-'))) - date(*(int(i) for i in sd.split('-')))).days + 1
+    rate = '{:.02f}'.format(float(db.session.query(func.find_rate(ct, pettype)).all()[0][0]))
+    price = '{:.02f}'.format(float(rate) * diff)
+    mthd = db.session.query(func.find_card('{}'.format(userid))).all()[0][0]
+    mthd = ('Credit Card' if mthd != '0' else 'Cash')
+
+    # SELECT applyBooking('cdebneyda', 'Monroty', 0, 'aneildy', '2020-11-05', '2020-11-05', 'Credit card')
+
+    if confirm_form.confirm_field.data and confirm_form.validate_on_submit():
+        db.session.execute(func.applyBooking(userid, pn, d, ct, sd, ed, mthd))
+        db.session.commit()
+        return redirect('/po_booking/{}/{}/{}/{}/{}'.format(pn, ct, sd, ed, d))
+
+    return render_template("/7_PO_confirmation.html",
+        po_name = po_name,
+        po_hp = po_hp,
+        petname = pn,
+        pettype = pettype,
+        special_req = special_req,
+        ct_name = ct_name,
+        ct_hp = ct_hp,
+        diff = diff,
+        rate = rate,
+        price = price,
+        mthd = mthd,
+        sd = sd,
+        ed = ed,
+        cancel_form = cancel_form,
+        confirm_form = confirm_form
+    )
+
+## Page 7b Caretaker Accept/Reject Page WITH CHAT
+@view.route("/ct_ar_booking/<pn>/<po>/<sd>/<ed>/<d>", methods = ["GET","POST"])
+def render_ct_ar_booking(pn,po,sd,ed,d):
+
+    if 'userid' not in session:
+        return redirect('/login')
+
+    userid = session['userid']
+
+    message_form = MessageForm()
+    reject_form = RejectForm()
+    accept_form = AcceptForm()
+
+    if message_form.text_field.data and message_form.validate_on_submit():
+        text = message_form.text_field.data
+        query = 'INSERT INTO Chat VALUES (\'{}\', \'{}\', \'{}\', {}, \'{}\', \'{}\', \'{}\', 2, \'{}\')'.format(
+            po, userid, pn, d, sd, ed, str(datetime.now()).split('.')[0] + '+08', text
+        )
+        db.session.execute(query)
+        db.session.commit()
+        return redirect('/ct_booking/{}/{}/{}/{}/{}'.format(pn, po, sd, ed, d))
+    elif reject_form.reject_field.data and reject_form.validate_on_submit():
+        query = 'UPDATE Looking_After SET status = \'Rejected\' WHERE pet_name = \'{}\' AND po_userid = \'{}\' AND ct_userid = \'{}\' AND start_date = \'{}\' AND end_date = \'{}\' AND dead = {}'.format(pn, po, userid, sd, ed, d)
+        db.session.execute(query)
+        db.session.commit()
+        return redirect('/ct_booking/{}/{}/{}/{}/{}'.format(pn, po, sd, ed, d))
+    elif accept_form.accept_field.data and accept_form.validate_on_submit():
+        query = 'UPDATE Looking_After SET status = \'Accepted\' WHERE pet_name = \'{}\' AND po_userid = \'{}\' AND ct_userid = \'{}\' AND start_date = \'{}\' AND end_date = \'{}\' AND dead = {}'.format(pn, po, userid, sd, ed, d)
+        db.session.execute(query)
+        db.session.commit()
+        return redirect('/ct_booking/{}/{}/{}/{}/{}'.format(pn, po, sd, ed, d))
+
+    #   wroparsdp    | aneildy     | Tallity  |    0 | 2020-11-12 | 2020-11-12
+    # /ct_ar_booking/Tallity/wroparsdp/2020-11-12/2020-11-12/0
+
+    ctname = db.session.query(func.find_name(userid)).all()[0][0]
+    name = db.session.query(func.find_name(po)).all()[0][0]
+    pet_type = db.session.query(func.find_pettype(po, pn, d)).all()[0][0]
+    duration = (date(*(int(i) for i in ed.split('-'))) - date(*(int(i) for i in sd.split('-')))).days + 1
+    query = "SELECT status, trans_pr, payment_op FROM Looking_After WHERE pet_name = \'{}\' AND po_userid = \'{}\' AND ct_userid = \'{}\' AND start_date = \'{}\' AND end_date = \'{}\' AND dead = {}".format(pn, po, userid, sd, ed, d)
+    status, trans_pr, payment_op = db.session.execute(query).fetchone()
+
+    query = "SELECT * FROM Chat WHERE pet_name = \'{}\' AND po_userid = \'{}\' AND ct_userid = \'{}\' AND start_date = \'{}\' AND end_date = \'{}\' AND dead = {}".format(pn, po, userid, sd, ed, d)
+    chat_log = db.session.execute(query).fetchall()
+    
+    chat_text = []
+    for c in chat_log:
+        sender = int(c[7])-1
+        chat_text.append('{}: {}'.format((c[0], c[1], 'Admin')[sender], c[8]))
+
+    return render_template("/8_PO_confirm_chat.html",
+        name = name,
+        hp = db.session.query(func.find_hp(po)).all()[0][0],
+        petname = pn,
+        pet_type = pet_type,
+        spec_req = db.session.query(func.find_specreq(userid, pn, d)).all()[0][0],
+        ctname = ctname,
+        ctnum = db.session.query(func.find_hp(userid)).all()[0][0],
+        start_date = str(sd),
+        end_date = str(ed),
+        duration = duration,
+        rate = '{:.02f}'.format(round(trans_pr/duration, 2)),
+        total = '{:.02f}'.format(round(trans_pr, 2)),
+        status = status,
+        payment_op = payment_op,
+        chat_text = '\n\n'.join(chat_text),
+        form = message_form,
+        reject_form = reject_form,
+        accept_form = accept_form
+    ) ## TODO pet profile link
+
+## Page 8a Pet Owner Confirmed booking page ## Pet Owner Sending Message
+@view.route("/po_booking/<pn>/<ct>/<sd>/<ed>/<d>", methods = ["GET","POST"])
+def render_po_booking(pn,ct,sd,ed,d):
+    if 'userid' not in session:
+        return redirect('/login')
+
+    userid = session['userid']
+
+    message_form = MessageForm()
+
+    if message_form.validate_on_submit():
+        text = message_form.text_field.data ##if you see 1 it's pet owner sending
+        query = 'INSERT INTO Chat VALUES (\'{}\', \'{}\', \'{}\', {}, \'{}\', \'{}\', \'{}\', 1, \'{}\')'.format(
+            userid, ct, pn, d, sd, ed, str(datetime.now()).split('.')[0] + '+08', text
+        )
+        db.session.execute(query)
+        db.session.commit()
+        return redirect('/po_booking/{}/{}/{}/{}/{}'.format(pn, ct, sd, ed, d))
+    #  cidiens9a | aneildy   | Bernharty |    0 | 2020-10-11 | 2020-10-11
+    # /booking/Bernharty/aneildy/2020-10-11/2020-10-11/0
+
+    #  ahansemannnx | aneildy   | Nissty    |    0 | 2020-11-18 | 2020-11-20
+    # /booking/Nissty/aneildy/2020-11-18/2020-11-20/0
+
+    name = db.session.query(func.find_name(userid)).all()[0][0]
+    ctname = db.session.query(func.find_name(ct)).all()[0][0]
+    pet_type = db.session.query(func.find_pettype(userid, pn, d)).all()[0][0]
+    duration = (date(*(int(i) for i in ed.split('-'))) - date(*(int(i) for i in sd.split('-')))).days + 1
+    query = "SELECT status, trans_pr, payment_op FROM Looking_After WHERE pet_name = \'{}\' AND po_userid = \'{}\' AND ct_userid = \'{}\' AND start_date = \'{}\' AND end_date = \'{}\' AND dead = {}".format(pn, userid, ct, sd, ed, d)
+    status, trans_pr, payment_op = db.session.execute(query).fetchone()
+
+    query = "SELECT * FROM Chat WHERE pet_name = \'{}\' AND po_userid = \'{}\' AND ct_userid = \'{}\' AND start_date = \'{}\' AND end_date = \'{}\' AND dead = {}".format(pn, userid, ct, sd, ed, d)
+    chat_log = db.session.execute(query).fetchall()
+    
+    chat_text = []
+    for c in chat_log:
+        sender = int(c[7])-1
+        chat_text.append('{}: {}'.format((c[0], c[1], 'Admin')[sender], c[8]))
+
+    return render_template("/8a_PO_confirmed_transaction.html",
+        name = name,
+        hp = db.session.query(func.find_hp(userid)).all()[0][0],
+        petname = pn,
+        pet_type = pet_type,
+        spec_req = db.session.query(func.find_specreq(userid, pn, d)).all()[0][0],
+        ctname = ctname,
+        ctnum = db.session.query(func.find_hp(ct)).all()[0][0],
+        start_date = str(sd),
+        end_date = str(ed),
+        duration = duration,
+        rate = round(trans_pr/duration, 2),
+        total = round(trans_pr, 2),
+        status = status,
+        payment_op = payment_op,
+        chat_text = '\n\n'.join(chat_text),
+        form = message_form
+    ) ## TODO pet profile link
+
+##Page  8b Caretaker Confirm Booking Page
+@view.route("/ct_booking/<pn>/<po>/<sd>/<ed>/<d>", methods = ["GET","POST"])
+def render_ct_booking(pn,po,sd,ed,d):
+
+    if 'userid' not in session:
+        return redirect('/login')
+
+    userid = session['userid']
+
+    message_form = MessageForm()
+
+    if message_form.validate_on_submit():
+        text = message_form.text_field.data ##if you see 2 its caretaker sending
+        query = 'INSERT INTO Chat VALUES (\'{}\', \'{}\', \'{}\', {}, \'{}\', \'{}\', \'{}\', 2, \'{}\')'.format(
+            po, userid, pn, d, sd, ed, str(datetime.now()).split('.')[0] + '+08', text
+        )
+        db.session.execute(query)
+        db.session.commit()
+        return redirect('/ct_booking/{}/{}/{}/{}/{}'.format(pn, po, sd, ed, d))
+    #   wroparsdp    | aneildy     | Tallity  |    0 | 2020-11-12 | 2020-11-12
+    # /ct_booking/Tallity/wroparsdp/2020-11-12/2020-11-12/0
+
+    ctname = db.session.query(func.find_name(userid)).all()[0][0]
+    name = db.session.query(func.find_name(po)).all()[0][0]
+    pet_type = db.session.query(func.find_pettype(po, pn, d)).all()[0][0]
+    duration = (date(*(int(i) for i in ed.split('-'))) - date(*(int(i) for i in sd.split('-')))).days + 1
+    query = "SELECT status, trans_pr, payment_op FROM Looking_After WHERE pet_name = \'{}\' AND po_userid = \'{}\' AND ct_userid = \'{}\' AND start_date = \'{}\' AND end_date = \'{}\' AND dead = {}".format(pn, po, userid, sd, ed, d)
+    status, trans_pr, payment_op = db.session.execute(query).fetchone()
+
+    query = "SELECT * FROM Chat WHERE pet_name = \'{}\' AND po_userid = \'{}\' AND ct_userid = \'{}\' AND start_date = \'{}\' AND end_date = \'{}\' AND dead = {}".format(pn, po, userid, sd, ed, d)
+    chat_log = db.session.execute(query).fetchall()
+    
+    chat_text = []
+    for c in chat_log:
+        sender = int(c[7])-1
+        chat_text.append('{}: {}'.format((c[0], c[1], 'Admin')[sender], c[8]))
+
+    return render_template("/8a_PO_confirmed_transaction.html",
+        name = name,
+        hp = db.session.query(func.find_hp(po)).all()[0][0],
+        petname = pn,
+        pet_type = pet_type,
+        spec_req = db.session.query(func.find_specreq(userid, pn, d)).all()[0][0],
+        ctname = ctname,
+        ctnum = db.session.query(func.find_hp(userid)).all()[0][0],
+        start_date = str(sd),
+        end_date = str(ed),
+        duration = duration,
+        rate = '{:.02f}'.format(round(trans_pr/duration, 2)),
+        total = '{:.02f}'.format(round(trans_pr, 2)),
+        status = status,
+        payment_op = payment_op,
+        chat_text = '\n\n'.join(chat_text),
+        form = message_form
+    ) ## TODO pet profile link
+
+## Page 9 All transactions
+
+## Check 7 and 8 linking TODO: 
+@view.route("/transactions",methods = ["GET","POST"])
+def render_transactions_page():
+    #session['userid'] = 'deverton82'
+    if 'userid' not in session:
+        return redirect('/login')
+    userid = session['userid']
+    all_transac = db.session.query(func.all_your_transac(userid)).all() # (ct_userid 0, po_userid 1, pet_name 2, dead 3, start_date 4, end_date 5, status 6, rating 7)
+    #ct_userid 0, po_userid 1, pet_name 2, start_date 3, end_date 4, status 5, rating 6, dead 7
+    table = list()
+    for row in all_transac:
+        new = list(csv.reader([row[0][1:-1]]))[0]
+        if new[7] == 'NULL' and new[6] == 'Completed' and new[1] == userid: # po is me --> completed transaction yet to be reviewed
+            href = "/write_review_rating/"+'/'.join((new[1], new[2],new[0],new[4], new[5], new[3]))
+           # <userid>"/<pn>/<ct>/<sd>/<ed>/<d>"
+           # + '/'.join(row[0][1:-1].split(","))
+        else:
+            href = "/booking/" +'/'.join((new[2], new[0], new[4], new[5], new[6], new[3]))
+            #<pn>/<ct>/<sd>/<ed>/<st>/<d>
+        new[0] = db.session.query(func.find_name(new[0])).all()[0][0] # ct_name
+        new[1] = db.session.query(func.find_name(new[1])).all()[0][0] # po_name
+        new[7] = href
+        print(new)
+        table.append(dict(zip(('ct_name','po_name', 'pet_name', 'start_date', 'end_date', 'status', 'rating', 'hrefstring'), new))) # completed and not reviewed -> review booking ELSE view booking
+    return render_template("/9_all_transactions.html", table = table)
+
+
+
+## Page 10 Caretaker Review
+
+@view.route("/ct_review/<ct_userid>",methods = ["GET","POST"])
+def render_ct_review(ct_userid):
+    if 'userid' not in session:
+        return redirect('/login')
+    search_result = db.session.query(func.ct_reviews(ct_userid)).all()
+    table = []
+    for row in search_result:
+        new = list(csv.reader([row[0][1:-1]]))[0]
+        new = new[1:]
+        new[0] = db.session.query(func.find_name(new[0])).all()[0][0]
+        new = new[:4] + new[5:]
+        table.append(dict(zip(('userid', 'pet_name', 'start_date', 'end_date','rating',"review"), new)))
+    return render_template("/10_CT_review.html", table = table)
+
+## Page 11 Write Review Ratings
+
+@view.route("/write_review_rating/<pn>/<ct>/<sd>/<ed>/<d>",methods = ["GET","POST"])
+def render_review_rating(pn,ct,sd,ed,d):
+    if 'userid' not in session: 
+        return redirect('/login')
+    userid = session['userid']
+    pet_type = db.session.query(func.find_pettype(userid, pn, d)).all()[0][0]
+    duration = (date(*(int(i) for i in ed.split('-'))) - date(*(int(i) for i in sd.split('-')))).days + 1
+    query = "SELECT status, trans_pr, payment_op FROM Looking_After WHERE pet_name = \'{}\' AND po_userid = \'{}\' AND ct_userid = \'{}\' AND start_date = \'{}\' AND end_date = \'{}\' AND dead = {}".format(pn, userid, ct, sd, ed, d)
+    status, trans_pr, payment_op = db.session.execute(query).fetchone()
+    
+    form = StarsForm()
+
+    if form.validate_on_submit():
+        given_rating = int(form.stars.data)/10
+        written_review= form.review.data
+        query = "UPDATE Looking_After la SET rating={}, review='{}' WHERE la.po_userid = '{}' AND la.ct_userid = '{}' AND la.start_date = '{}' AND la.end_date = '{}' AND la.pet_name = '{}' AND la.dead = {}".format(given_rating, written_review, userid, ct,sd,ed,pn,d)
+        db.session.execute(query)
+        db.session.commit()
+        return redirect('/po_home')
+    
+    return render_template("/11_review_rating.html",
+        name = db.session.query(func.find_name(userid)).all()[0][0],
+        hp = db.session.query(func.find_hp(userid)).all()[0][0],
+        petname = pn,
+        pet_type = pet_type,
+        spec_req = db.session.query(func.find_specreq(userid, pn, d)).all()[0][0],
+        ctname = db.session.query(func.find_name(ct)).all()[0][0],
+        ctnum = db.session.query(func.find_hp(ct)).all()[0][0],
+        start_date = str(sd),
+        end_date = str(ed),
+        duration = duration,
+        rate = round(trans_pr/duration, 2), ##TODO format
+        total = round(trans_pr, 2),
+        status = status,
+        payment_op = payment_op,
+        form = form
+    )
+
+## Page 12a Full time caretaker home page 
+@view.route("/ft_home",methods=["GET", "POST"])
+def render_ft_home():
+    
+    ## redirects if the person is not logged in
+    if 'userid' not in session:
+        return redirect('/login')
+        
+    name = session['name']
+    #userid = session['userid']
+    userid = 'deverton82' ## change this later
+    # if 'user_role' not in session:
+    user_role = get_user_role(userid)
+    session['user_role'] = user_role
+    user_role = session['user_role']
+    if 'ptct' in user_role:
+        return redirect('/pt_home')
+    elif 'ftct' not in user_role:
+        return redirect('/po_home')
+
+    ## need to create logic if 
+    ## person is not caretaker 
+    ## person is not PT caretaker
+    ## person does not have any upcoming and pending jobs
+    ## person does not have either one job
+    data_upcoming = db.session.query(func.ftpt_upcoming(userid)).all()
+    upcoming_jobs = []
+    for row in data_upcoming:
+        upcoming_jobs.append(dict(zip(('pet_name', 'userid', 'start_date', 'end_date'), row[0][1:-1].split(","))))
+    
+    return render_template("/12_FT_home.html", name = name,
+        upcoming_jobs = upcoming_jobs,
+        has_upcoming = (len(upcoming_jobs) > 0))
+
+## Page 12b Part time caretaker home page
 @view.route("/pt_home",methods=["GET", "POST"])
 def render_pt_home():
     
@@ -318,69 +753,313 @@ def render_pt_home():
         pending_jobs = pending_jobs,
         has_pending = (len(pending_jobs) > 0))
 
-@view.route("/ft_home",methods=["GET", "POST"])
-def render_ft_home():
-    
-    ## redirects if the person is not logged in
+## Page 13a FT Leave Apply
+
+@view.route("/ft_leave_apply", methods = ["GET", "POST"])
+def render_FT_leave_apply():
     if 'userid' not in session:
         return redirect('/login')
-        
-    name = session['name']
-    #userid = session['userid']
-    userid = 'deverton82' ## change this later
-    # if 'user_role' not in session:
-    user_role = get_user_role(userid)
-    session['user_role'] = user_role
-    user_role = session['user_role']
-    if 'ptct' in user_role:
-        return redirect('/pt_home')
-    elif 'ftct' not in user_role:
-        return redirect('/po_home')
-
-    ## need to create logic if 
-    ## person is not caretaker 
-    ## person is not PT caretaker
-    ## person does not have any upcoming and pending jobs
-    ## person does not have either one job
-    data_upcoming = db.session.query(func.ftpt_upcoming(userid)).all()
-    upcoming_jobs = []
-    for row in data_upcoming:
-        upcoming_jobs.append(dict(zip(('pet_name', 'userid', 'start_date', 'end_date'), row[0][1:-1].split(","))))
-    
-    return render_template("/12_FT_home.html", name = name,
-        upcoming_jobs = upcoming_jobs,
-        has_upcoming = (len(upcoming_jobs) > 0))
-
-@view.route("/search/<start_date>/<end_date>",methods=["GET", "POST"])
-def render_search(start_date,end_date):
-    if 'userid' not in session:
-        return redirect('/login')
-    petname = session["pet_selected"]
-    sd = session["start_date"]
-    ed = session["end_date"]
-    search_result = db.session.query(func.bid_search(petname,sd,ed)).all()
-    result = [i[0] for i in search_result]
-    ##need biddetails function to continue.
-    return render_template("/6_PO_search.html",search_result = search_result)
-
-@view.route("/booking/<pn>/<ct>/<sd>/<ed>/<st>/<d>", methods = ["GET","POST"])
-def render_booking(pn,ct,sd,ed,st,d):
-    if 'userid' not in session:
-        return redirect('/login')
-
     userid = session['userid']
-    
-    return render_template("/8a_PO_confirmed_transaction.html")
+    form = AddFT_leave()
+    name = db.session.query(func.find_name(userid)).all()[0][0] 
+    start_date = form.leave_startdate_field.data
+    end_date = form.leave_enddate_field.data
+    if form.validate_on_submit():
+        db.session.execute(func.ft_applyleave(userid, start_date, end_date))
+    search_result = db.session.query(func.ft_upcomingapprovedleave(userid)).all()
+    table = []
+    for row in search_result:
+        d = {}
+        new = list(csv.reader([row[0][1:-1]]))[0]
+        d["start_date"] = new[0]
+        d["end_date"] = new[1]
+        href = "/delete_ft_leave/" + userid  +'/'+ '/'.join(row[0][1:-1].split(","))
+        d["href"] = href
+        table.append(d)
+    return render_template("/13_FT_leave.html", table = table, name = name, form = form)
 
-@view.route("/review_rating/<pn>/<ct>/<sd>/<ed>/<d>",methods = ["GET","POST"])
-def render_review_rating(pn,ct,sd,ed,d):
+## After delete leave, it will redirect to this page. 
+
+@view.route("/delete_ft_leave/<userid>/<sd>/<ed>", methods = ["GET", "POST"])
+def delete_FT_leave(userid, sd, ed):
+    db.session.execute(func.ft_cancelleave(userid, sd, ed))
+    return redirect('/ft_leave_apply')
+
+
+## Page 13b Part Time Declare Avail
+
+@view.route("/pt_declare_avail", methods = ["GET", "POST"])
+def render_PT_declare_avail():
     if 'userid' not in session:
         return redirect('/login')
-    return render_template("/11_review_rating.html")
+    userid = session['userid']
+    form = AddPT_avail()
+    name = db.session.query(func.find_name(userid)).all()[0][0] 
+    start_date = form.avail_startdate_field.data
+    end_date = form.avail_enddate_field.data
+    if form.validate_on_submit():
+        db.session.execute(func.pt_applyavail(userid, start_date, end_date))
+    search_result = db.session.query(func.pt_upcomingavail(userid)).all()
+    table = []
+    for row in search_result:
+        d = {}
+        new = list(csv.reader([row[0][1:-1]]))[0]
+        d["start_date"] = new[0]
+        d["end_date"] = new[1]
+        href = "/delete_pt_avail/" + userid  +'/'+ '/'.join(row[0][1:-1].split(","))
+        d["href"] = href
+        table.append(d)
+    return render_template("/13_PT_avail.html", table = table, name = name, form = form)
+
+## After delete pt avail, it will refresh to the pt avail page
+
+@view.route("/delete_pt_avail/<userid>/<sd>/<ed>", methods = ["GET", "POST"])
+def delete_PT_leave(userid, sd, ed):
+    db.session.execute(func.pt_del_date(userid, sd, ed))
+    return redirect('/pt_declare_avail')
 
 
-@view.route("/transactions/<userid>",methods = ["GET","POST"])
-def render_transactions_page(userid):
+## Page 14 Check Salary
+
+@view.route("/check_salary", methods = ["GET", "POST"])
+def render_check_salary():
     if 'userid' not in session:
         return redirect('/login')
-    return render_template("/9_all_transactions.html")
+    userid = session["userid"]
+    user_role = get_user_role(userid)
+    _MONTH_LOOKUP = {1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June',
+        7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November', 12: 'December'}
+    months_active = db.session.query(func.for_gen_buttons(userid)).all()
+    table = list()
+    for row in months_active:
+        mth, yr = row[0].split(',')
+        d = {}
+        d['firstLetter'] = 'f' if 'ftct' in user_role else 'p'
+        d['mth'] = mth
+        d['yr'] = yr
+        d['full_month'] = _MONTH_LOOKUP[int(mth)]
+        table.append(d)
+    return render_template("14_salary.html", table = table)
+
+
+
+## Page 15a Full time salary breakdown
+
+@view.route("/ftsalary_breakdown/<month>/<year>", methods = ["GET", "POST"])
+def render_FTsalary_breakdown(month, year):
+    if 'userid' not in session:
+        return redirect('/login')
+    userid = session['userid']
+    month = int(month)
+    _MONTH_LOOKUP = {1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June',
+        7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November', 12: 'December'}
+    month  = _MONTH_LOOKUP[month]
+    year = int(year)
+    pet_days = db.session.query(func.total_pet_day_mnth(userid, year, month)).all()[0][0]
+    total_amt_for_mnth = db.session.query(func.total_trans_pr_mnth(userid, year, month)).all()[0][0]
+    trans_this_mth = db.session.query(func.trans_this_month(userid, year, month)).all()
+    table = list()
+    for row in trans_this_mth:
+        new = list(csv.reader([row[0][1:-1]]))[0]
+        new[0] = db.session.query(func.find_name(new[0])).all()[0][0]
+        table.append(dict(zip(('po_name', 'pet_name', 'start_date', 'end_date','rate','trans_amt'), new)))
+    avg_trans_amt = total_amt_for_mnth/pet_days
+    bonus = (pet_days - 60)*0.8
+    total_salary = bonus + 3000
+    return render_template("/15_FT_salary_breakdown.html", month = month, year = year, pet_days = pet_days, total_amt_for_mnth = total_amt_for_mnth, avg_trans_amt = avg_trans_amt, bonus = bonus, total_salary = total_salary, table = table)
+
+
+## Page 15b Part time salary breakdown
+
+@view.route("/ptsalary_breakdown/<month>/<year>", methods = ["GET", "POST"])
+def render_PTsalary_breakdown(month, year):
+    if 'userid' not in session:
+        return redirect('/login')
+    userid = session['userid']
+    month = int(month)
+    _MONTH_LOOKUP = {1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June',
+        7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November', 12: 'December'}
+    month = _MONTH_LOOKUP[month]
+    year = int(year)
+    trans_this_mth = db.session.query(func.trans_this_month(userid, year, month)).all()
+    table = list()
+    for row in trans_this_mth:
+        new = list(csv.reader([row[0][1:-1]]))[0]
+        new[0] = db.session.query(func.find_name(new[0])).all()[0][0]
+        table.append(dict(zip(('po_name', 'pet_name', 'start_date', 'end_date','rate','trans_amt'), new)))
+    total_amt_for_mnth = db.session.query(func.total_trans_pr_mnth(userid, year, month)).all()[0][0]
+    total_salary = total_amt_for_mnth*0.75
+    return render_template("/15_PT_salary_breakdown.html", month = month, year = year, total_amt_for_mnth = total_amt_for_mnth, total_salary = total_salary, table = table)
+
+## Page 16 Pet profile page
+
+@view.route("/pet_profile/<po_userid>/<pn>/<d>",methods = ["GET","POST"])
+def render_pet_profile(po_userid,pn,d):
+    if 'userid' not in session:
+        return redirect('/login')
+    po_name = db.session.query(func.find_name(po_userid)).all()[0][0]    
+    pet_type = db.session.query(func.find_pettype(po_userid, pn, d)).all()[0][0]
+    spec_req = db.session.query(func.find_specreq(po_userid, pn, d)).all()[0][0]
+    birthday = db.session.query(func.find_birthday(po_userid, pn)).all()[0][0]
+    return render_template("/16_Pet_profile.html", pet_name = pn, po_name = po_name, pet_type = pet_type,
+                           birthday = birthday, spec_req = spec_req)
+
+## Page 17a Admin home page
+
+@view.route("/admin_home", methods = ["GET", "POST"])
+def render_admin_home():
+    if 'userid' not in session:
+        return redirect('/login')
+    mod_form = Admin_modify_price()
+    stats_search = Admin_stat_search()
+
+    if 'cat_rate' in request.form: # checking the form
+        pairs = [('Cat', mod_form.cat_rate), ('Dog', mod_form.dog_rate), ('Rabbit', mod_form.rabbit_rate), ('Guinea pig', mod_form.guinea_rate),
+                ('Hamster', mod_form.hamster_rate), ('Gerbil', mod_form.gerbil_rate), ('Mouse', mod_form.mouse_rate), ('Chinchilla', mod_form.chinchilla_rate)]
+        for animal, field in pairs:
+            if field.data:
+                try:
+                    db.session.execute(func.admin_modify_base(animal, float(field.data)))
+                    db.session.commit()
+                except:
+                    pass
+    elif 'month_field' in request.form: # checking the form
+        mth = str(stats_search.month_field.data)
+        yr = stats_search.year_field.data
+        return redirect('/admin_stats/' + mth + '/' + yr)
+    return render_template("17_admin_home.html", mod_form = mod_form, stats_search = stats_search)
+
+## Page 17b Admin Statistics
+
+@view.route("/admin_stats/<month>/<year>", methods = ["GET", "POST"])
+def render_admin_stats(month, year):
+    if 'userid' not in session:
+        return redirect('/login')
+    month = int(month)
+    year = int(year)
+    revenue = db.session.query(func.admin_revenue_this_mnth(year, month)).all()[0][0]
+    salary = db.session.query(func.admin_salary_payments_this_mnth(year, month)).all()[0][0]
+    profit = revenue - salary
+
+    revenue = '${:.02f}'.format(round(revenue, 2))
+    salary = '${:.02f}'.format(round(salary, 2))
+    profit = '{}${:.02f}'.format('-' if profit < 0 else '', abs(round(profit, 2)))
+    salary_bd = db.session.query(func.admin_salary_payments_this_mnth_bd(year, month)).all()
+    salary_table = list()
+    for row in salary_bd:
+        new = list(csv.reader([row[0][1:-1]]))[0]
+        new[1] = '${:.02f}'.format(round(float(new[1]), 2))
+        salary_table.append(dict(zip(('userid', 'salary2'), new)))
+
+    total_pets = db.session.query(func.admin_total_num_pets(year, month)).all()[0][0]
+    pet_bd = db.session.query(func.admin_total_num_pets_bd(year, month)).all()
+    bd_pet_table = list()
+    for row in pet_bd:
+        new = list(csv.reader([row[0][1:-1]]))[0]
+        bd_pet_table.append(dict(zip(('pet_type', 'unique_pets'), new)))
+
+    under_perf = db.session.query(func.fire_who(year, month, 3.0, 30)).all() ##TODO Magic numbers
+    under_perf_table = list()
+    for row in under_perf:
+        new = list(csv.reader([row[0][1:-1]]))[0]
+        new[2] = '{:.02f}'.format(round(float(new[2]), 2))
+        under_perf_table.append(dict(zip(('name', 'userid', 'rating', 'petdays'), new)))
+
+    well_perf = db.session.query(func.praise_who(year, month, 4.2, 60)).all() ##TODO Magic numbers
+    well_perf_table = list()
+    for row in well_perf:
+        new = list(csv.reader([row[0][1:-1]]))[0]
+        new[2] = '{:.02f}'.format(round(float(new[2]), 2))
+        well_perf_table.append(dict(zip(('name', 'userid', 'rating', 'petdays'), new)))
+
+    val_PO = db.session.query(func.admin_valuable_po(year, month)).all()
+    val_PO_table = list()
+    for row in val_PO:
+        print(row)
+        new = list(csv.reader([row[0][1:-1]]))[0]
+        new.append(db.session.query(func.find_name(new[0])).all()[0][0])
+        new[1] = '${:.02f}'.format(round(float(new[1]), 2))
+        val_PO_table.append(dict(zip(('userid','payments', 'name'), new)))
+
+    _MONTH_LOOKUP = {1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June',
+        7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November', 12: 'December'}
+    month = _MONTH_LOOKUP[month]
+    return render_template("17b_admin_home.html", salary = salary, \
+                                                salary_table = salary_table, \
+                                                year = year, \
+                                                month = month, \
+                                                revenue = revenue, \
+                                                profit = profit,\
+                                                total_pets = total_pets, \
+                                                bd_pet_table = bd_pet_table,\
+                                                under_perf_table = under_perf_table, \
+                                                well_perf_table = well_perf_table, \
+                                                val_PO_table = val_PO_table)
+
+
+##Page 18 Admin add fulltime employee page
+@view.route("/admin/addft", methods = ["GET", "POST"])
+def render_addFT():
+    if 'userid' not in session:
+        return redirect('/login')
+    form = AddFT()
+    if form.validate_on_submit():
+        userid = form.userid.data
+        name = form.name.data
+        password = form.password.data
+        email = form.email.data
+        postal = form.postal.data
+        address = form.address.data
+        hp = form.hp.data
+        podata = form.po_checkbox.data
+        ctdata = form.ct_checkbox.data
+
+        check_user = "SELECT * FROM Users WHERE userid = '{}'".format(userid)
+        exists_user = db.session.execute(check_user).fetchone()
+        check_email = "SELECT * FROM Users WHERE email = '{}'".format(email)
+        exists_email = db.session.execute(check_email).fetchone()
+        if exists_user:
+            form.userid.errors.append("{} is already in use.".format(userid))
+        if exists_email:
+            form.email.errors.append("{} is already in use.".format(email))
+        query1 = "INSERT INTO Accounts(userid,password) VALUES ('{}', '{}')".format(userid,password)
+        db.session.execute(query1)
+        db.session.commit()
+        query2 = "INSERT INTO Users(userid, name, postal,address,hp, email) VALUES ('{}', '{}', '{}','{}', '{}', '{}')"\
+            .format(userid,name,postal,address,hp,email)
+        db.session.execute(query2)
+        db.session.commit()
+        roles = ''
+        if podata:
+            query = "INSERT INTO Pet_Owner(po_userid) VALUES ('{}')".format(userid)
+            db.session.execute(query)
+            db.session.commit()
+            roles += 'po'
+        if ctdata:
+            query = "INSERT INTO Caretaker(ct_userid, full_time) VALUES ('{}', TRUE)".format(userid)
+            db.session.execute(query)
+            db.session.commit()
+            if roles:
+                roles += '/'
+            roles += 'ftct'
+        return redirect("/admin_home.html")
+    return render_template("18_addFT.html", form=form)
+
+
+##Page ?? Logout page
+
+@view.route('/logout')
+def render_logout_page():
+    session.pop('userid',None)
+    return redirect('/')
+
+## Additional pages to note
+@view.route("/privileged-page", methods=["GET"])
+@login_required
+def render_privileged_page():
+    return "<h1>Hello, {}!</h1>".format(current_user.preferred_name or current_user.userid)
+
+@view.route("/reset",methods = ["GET"])
+def render_reset():
+    return "<h1>Hello</h1>\
+    <h2>Don't forget your userid or password!</h2>"

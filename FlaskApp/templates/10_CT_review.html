@@ -13,7 +13,7 @@ Licence URI: https://www.os-templates.com/template-terms
 <title>Pet Stealer</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link href="static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
+<link href="../static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
 </head>
 <body id="top">
 <!-- ################################################################################################ -->
@@ -58,7 +58,7 @@ Licence URI: https://www.os-templates.com/template-terms
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
-<div class="wrapper bgded overlay" style="background-image:url('static/images_website/bgg.png');">
+<div class="wrapper bgded overlay" style="background-image:url('../static/images_website/bgg.png');">
   <div id="pageintro" class="hoc clear"> 
     <!-- ################################################################################################ -->
     <article>
@@ -75,15 +75,24 @@ Licence URI: https://www.os-templates.com/template-terms
     
     <table style="width: 100%">
         <tr>
-            <th>Pet Owner's Name</th>
-            <th>Pet Name</th>
-            <th>Start Date</th>
-            <th>End Date</th>
-            <th>Rating</th>
-            <th>Review</th>
+            <th style="text-align:center; width = 10%">Pet Owner's Name</th>
+            <th style="text-align:center; width = 10%">Pet Name</th>
+            <th style="text-align:center; width = 10%">Start Date</th>
+            <th style="text-align:center; width = 10%">End Date</th>
+            <th style="text-align:center; width = 10%">Rating</th>
+            <th style="text-align:center; width = 50%">Review</th>
         </tr>
+          {% for item in table %}
+          <tr style="color:black">
+            <td style="text-align:center">{{item.userid}}</td>
+            <td style="text-align:center">{{item.pet_name}}</td>
+            <td style="text-align:center">{{item.start_date}}</td>
+            <td style="text-align:center">{{item.end_date}}</td>
+            <td style="text-align:center">{{item.rating}}</td>
+            <td style="width: 50%">{{item.review}}</td>
+          </tr>
+          {% endfor %}
     </table>
-
 </div>
 </div>
 </body>

@@ -63,7 +63,7 @@ Licence URI: https://www.os-templates.com/template-terms
     <!-- ################################################################################################ -->
     <article>
       <div class="fl_left">
-        <h2 class="heading"> Apply Leave </h2>
+        <h2 class="heading"> Hi {{ name }},  Welcome to the Leave Application Centre</h2>
       </div>
       <br>
       <br>
@@ -71,21 +71,32 @@ Licence URI: https://www.os-templates.com/template-terms
       <br>
       <br>
 
-      <div class="one_quarter first ">
+
+          <form action='#' method='post'>
+      <div class="one_quarter first " style="color: black">
         <p>From: </p>
-        <input type="Date" id="Start" name="looking after start"
-        value="2020-01-01" min="2020-01-01" max="2020-12-31" style="color: grey"> 
+        {{form.leave_startdate_field}}
+        <!-- <input type="Date" id="Start" name="looking after start"
+        value="2020-01-01" min="2020-01-01" max="2020-12-31" style="color: grey">  -->
       </div> 
       
-      <div class="one_quarter "> 
-        <p>To: </p>            
-        <input type="Date" id="Start" name="looking after end"
+      <div class="one_quarter" style="color: black"> 
+        <p>To: </p>  
+        {{form.leave_enddate_field}}          
+        <!--<input type="Date" id="Start" name="looking after end"
         value="2020-01-01" min="2020-01-01" max="2020-12-31" style="color: grey"> 
+      -->
       </div>
       
-      <div class="one_quarter "> 
-        <footer><a class="btn" href="13_FT_leave.html">Apply Leave</a></footer>
+      <div class="one_quarter " style="color: black"> 
+        <footer>
+                        {{ form.csrf_token }}
+        {{ form.submit_field (class_="btn")}}
+
+        </footer>
       </div> 
+        </form>
+
       <br>
       <br>      
     </article>
@@ -107,16 +118,14 @@ Licence URI: https://www.os-templates.com/template-terms
           <th>End Date</th>
           <th>Cancel</th>
         </tr>
+        {% for item in table %}
         <tr style="color:black">
-          <td>  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</td>
-          <td>  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</td>
-          <td>  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</td>
-        </tr>
-        <tr style="color:black">
-          <td>  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</td>
-          <td>  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</td>
-          <td>  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</td>
-        </tr>
+            <td>{{item.start_date}}</td>
+            <td>{{item.end_date}}</td>
+            <td><a class="btn" href="{{item.href}}">Cancel Leave</a></td> <!-- please fill later -->
+          </tr>
+          {% endfor %}
+        
       </table>
     </article>
 </div>

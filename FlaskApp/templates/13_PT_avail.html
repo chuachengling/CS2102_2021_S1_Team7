@@ -63,15 +63,36 @@ Licence URI: https://www.os-templates.com/template-terms
     <!-- ################################################################################################ -->
     <article>
       <div class="fl_left">
-        <h2 class="heading"> Declare Availablity </h2>
+        <h2 class="heading"> Hi {{ name }},  Welcome to the Availability Declaration Centre </h2>
       </div>
       <br>
       <br>
       <br>
       <br>
       <br>
+      <form action='#' method='post'>
+      <div class="one_quarter first " style="color: black">
+        <p>From: </p>
+        {{form.leave_startdate_field}}
+        <!-- <input type="Date" id="Start" name="looking after start"
+        value="2020-01-01" min="2020-01-01" max="2020-12-31" style="color: grey">  -->
+      </div> 
+      
+      <div class="one_quarter" style="color: black"> 
+        <p>To: </p>  
+        {{form.leave_enddate_field}}          
+        <!--<input type="Date" id="Start" name="looking after end"
+        value="2020-01-01" min="2020-01-01" max="2020-12-31" style="color: grey"> 
+      -->
+      </div>
+      
+      <div class="one_quarter " style="color: black"> 
+        <footer>
+                        {{ form.csrf_token }}
+        {{ form.submit_field (class_="btn")}}
 
-      <div class="one_quarter first ">
+        </footer>
+      <!-- <div class="one_quarter first ">
         <p>From: </p>
         <input type="Date" id="Start" name="looking after start"
         value="2020-01-01" min="2020-01-01" max="2020-12-31" style="color: grey"> 
@@ -85,7 +106,9 @@ Licence URI: https://www.os-templates.com/template-terms
       
       <div class="one_quarter "> 
         <footer><a class="btn" href="13_PT_avail.html">Declare</a></footer>
-      </div> 
+      </div>  -->
+         </div>
+       </form>
       <br>
       <br>      
     </article>
@@ -107,16 +130,13 @@ Licence URI: https://www.os-templates.com/template-terms
           <th>End Date</th>
           <th>Cancel</th>
         </tr>
+        {% for item in table %}
         <tr style="color:black">
-          <td>  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</td>
-          <td>  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</td>
-          <td>  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</td>
+            <td>{{item.start_date}}</td>
+            <td>{{item.end_date}}</td>
+            <td><a class="btn" href="{{item.href}}">Cancel Availability</a></td>  <!-- please fill later -->
         </tr>
-        <tr style="color:black">
-          <td>  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</td>
-          <td>  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</td>
-          <td>  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</td>
-        </tr>
+        {% endfor %}
       </table>
     </article>
 </div>

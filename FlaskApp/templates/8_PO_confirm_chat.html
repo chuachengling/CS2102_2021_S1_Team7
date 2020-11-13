@@ -13,7 +13,7 @@ Licence URI: https://www.os-templates.com/template-terms
 <title>Pet Stealer</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link href="static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
+<link href="../../../../../static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
 </head>
 <body id="top">
 <!-- ################################################################################################ -->
@@ -58,16 +58,16 @@ Licence URI: https://www.os-templates.com/template-terms
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
-<div class="wrapper bgded overlay" style="background-image:url('static/images_website/bgg.png');">
+<div class="wrapper bgded overlay" style="background-image:url('../../../../../static/images_website/bgg.png');">
   <div id="pageintro" class="hoc clear"> 
     <!-- ################################################################################################ -->
     <article>
       <div class="fl_left">
         <h2 class="heading">Booking Summary</h2>
       </div>
-      <div class="fl_right">
+      <!-- <div class="fl_right">
         <a class="btn" href="5_PO_home.html">CANCEL BOOKING</a>
-      </div>
+      </div> -->
     </article>
     <article>
       <br>
@@ -77,34 +77,45 @@ Licence URI: https://www.os-templates.com/template-terms
       
       <div class="fl_left">
         <p>Summary of Details:</p>
-        <p>STATUS:</p>
-        <p>Pet Owner Name: Nikole </p>
-        <p>Pet Owner Phone Number: XXXX XXXX </p>
+        <p style="color: #white">STATUS:
+        <span style="color: #00FD49">{{status}}</span>
+        </p>
+        
+        <p>Pet Owner Name: {{name}} </p>
+        <p>Pet Owner Phone Number: {{hp}} </p>
         <br>         
-        <p>Pet Name: XXXXX </p>
-        <p>Pet Type: XXXXX </p>
-        <p>Special Request: XXXXXXXXXX </p> 
+        <p>Pet Name: {{petname}} </p>
+        <p>Pet Type: {{pet_type}} </p>
+
+        <p>Special Request: {{spec_req}} </p> 
         <br> 
-        <p>Care Taker Name: Chua Cheng Ling</p>
-        <p>Care Taker Phone Number: XXXX XXXX </p>
-        <p>Start Date: XX/XX/XX </p>
-        <p>End Date: XX/XX/XX </p>
-        <p>Price: XX days * $20 = $XX </p> 
-        <p>Payment Method: XXX </p> 
-        <a class="btn" href="5_PO_home.html">REJECT</a> <!-- only for CT -->
-        <a class="btn" href="8a_PO_confirmed_transaction.html">ACCEPT</a> <!-- only for CT -->
+        <p>Care Taker Name: {{ctname}}</p>
+        <p>Care Taker Phone Number: {{ctnum}}</p>
+        <p>Start Date: {{start_date}}</p>
+        <p>End Date: {{end_date}}</p>
+        <p>Price: {{duration}} days * ${{rate}} = ${{total}} </p> 
+        <p>Payment Method: {{payment_op}} </p> 
+
+        <form action='#' method='post'>
+          {{ reject_form.csrf_token}}
+          {{ reject_form.reject_field (class_="btn")}}
+        </form>
+        <form action='#' method='post'>
+          {{ accept_form.csrf_token}}
+          {{ accept_form.accept_field (class_="btn")}}
+        </form>
+
       </div>
       <div class="fl_right">
-        <p>Chat</p>
-        <p>insert chat bubbles</p>
-        <p>...</p>
-        <p>...</p>
-        <p>...</p>
-        <textarea rows="5" cols="50" style="color: grey">Message</textarea>
-        <a class="btn" type="submit" href="#">SEND!</a> 
+        <textarea rows="20" cols="50" style="color: grey" readonly>{{chat_text}}</textarea>
+        <form action='#' method='post'>
+                        {{ form.csrf_token }}
+        {{ form.text_field(rows = '5', cols='50', style='color:black') }}
+        <!-- <textarea rows="5" cols="50" style="color: grey">Message</textarea> -->
+        <!-- <a class="btn" type="submit" href="#">SEND!</a>  -->
+        {{ form.submit_field (class_="btn")}}
+        </form>
       </div>
     </article>
   </div>
 </div>
-</body>
-</html>

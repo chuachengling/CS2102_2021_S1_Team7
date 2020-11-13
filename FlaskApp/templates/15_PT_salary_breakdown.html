@@ -13,7 +13,7 @@ Licence URI: https://www.os-templates.com/template-terms
 <title>Pet Stealer</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link href="static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
+<link href="../../../../../../static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
 </head>
 <body id="top">
 <!-- ################################################################################################ -->
@@ -58,13 +58,13 @@ Licence URI: https://www.os-templates.com/template-terms
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
-<div class="wrapper bgded overlay" style="background-image:url('static/images_website/bgg.png');">
+<div class="wrapper bgded overlay" style="background-image:url('../../../../../../static/images_website/bgg.png');">
   <div id="pageintro" class="hoc clear"> 
     <!-- ################################################################################################ -->
     <article>
       <h2 class="heading">Salary Breakdown</h2>
       <br>
-      <p>Month of: _JAN 2020_</p>
+      <p>Month/Year: {{ month }} {{ year }}</p>
       <p>All Transactions for the Month: </p>
         <table style="width: 100%">
         <tr>
@@ -75,9 +75,19 @@ Licence URI: https://www.os-templates.com/template-terms
             <th>Rate</th>
             <th>Transaction Amount</th>
         </tr>
+        {% for item in table %}
+          <tr style="color:black">
+            <td>{{item.po_name}}</td>
+            <td>{{item.pet_name}}</td>
+            <td>{{item.start_date}}</td>
+            <td>{{item.end_date}}</td>
+            <td>{{item.rate}}</td>
+            <td>{{item.trans_amt}}</td>
+          </tr>
+          {% endfor %}
         </table>
-      <p>Total Transaction Amount for the Month:</p>
-      <p>Total Salary for the Month: Total Transaction for the Month * 75% = </p>
+      <p>Total Transaction Amount for the Month: {{ total_amt_for_mth }}</p>
+      <p>Total Salary for the Month: Total Transaction for the Month * 75% = {{ total_salary }}</p>
       <br>
       <br>
       <a class="btn" href="14_salary.html">Back to Previous Page</a>

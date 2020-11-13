@@ -63,10 +63,10 @@ Licence URI: https://www.os-templates.com/template-terms
     <!-- ################################################################################################ -->
     <article>
       <div class="fl_left">
-        <h2 class="heading">Profile of USER</h2>
+        <h2 class="heading">Profile of {{name}}</h2>
       </div>
       <div class="fl_right">
-        <a class="btn" href="#">DEACTIVATE ACCOUNT</a>
+        <a class="btn" href="/deleteacc">DEACTIVATE ACCOUNT</a>
       </div>
     </article>
     <br>
@@ -75,7 +75,20 @@ Licence URI: https://www.os-templates.com/template-terms
         <div class="content" style="color:black">
           <br>
           <p>Personal Profile</p>
-          <p>Update Handphone Number: 
+          <form action='#' method='post'>
+            {{ personal_form.csrf_token}}
+            {{ personal_form.handphone_field.label }}
+            {{ personal_form.handphone_field }}
+            {{ personal_form.address_field.label }}
+            {{ personal_form.address_field }}
+            {{ personal_form.password_field.label }}
+            {{ personal_form.password_field }}
+            <div class="fl_right">
+              <footer>{{ personal_form.submit_field (class_="btn") }}</footer>  
+              <br> 
+            </div>
+          </form>
+          <p><!-- date Handphone Number: 
             <span><textarea rows="1" cols="20" style="color: grey">Enter new number here</textarea></span>
           </p>
           <p>Update Address: 
@@ -83,46 +96,115 @@ Licence URI: https://www.os-templates.com/template-terms
           </p>
           <p>Change Password: 
             <span><textarea rows="1" cols="20" style="color: grey">Enter new password here</textarea></span>
-          </p>
-          <form action="/action_page.php">
-            <label for="cars">Pets I can care for:</label>
-            <select name="cars" id="cars" multiple>
-              <option value="Cat">Cat</option>
-              <option value="Dog">Dog</option>
-              <option value="Rabbit">Rabbit</option>
-              <option value="Snake">Snake</option>
-            </select>
-          </form>
-          <div class="fl_right">
-            <footer><a class="btn" href="#">Update</a></footer>  
-            <br> 
-          </div>
+          </p> -->
         </div>
     </article>
+        {% if is_po %}
     <br><br><br><br>
     <article>
       <button type="button" class="collapsible">Pet</button>
         <div class="content" style="color:black">
           <br>
           <p>Pet Profile</p>
-          <p>This is a test</p>
-          <p>This is a test</p>
-          <p>This is a test</p>
-          <p>This is a test</p>
+            <table style="width: 100%">
+            <tr>
+              <th>Pet Name</th>
+              <th>Pet Type</th>
+              <th>Date of Birth</th>
+              <th>Special Request</th>
+              <th>Remove</th>
+            </tr>
+          {% for item in table %}
+          <tr style="color:black">
+            <td>{{item.pn}}</td>
+            <td>{{item.p_type}}</td>
+            <td>{{item.dob}}</td>
+            <td>{{item.special_req}}</td>
+            <td><a class="btn" href="{{item.href}}">Remove</a></td>
+          </tr>
+          {% endfor %}
+        </table>
+        <div>
+          <button type="button" class="collapsible">Add Pet</button>
+          <div>
+            <br>
+            <p> Add a New Pet</p>
+            <form action='#' method='post'>
+              {{ add_pet_form.csrf_token}}
+              {{ add_pet_form.petname_field.label }}
+              {{ add_pet_form.petname_field }}
+              {{ add_pet_form.pettype_field.label }}
+              {{ add_pet_form.pettype_field }}
+              {{ add_pet_form.dob_field.label }}
+              {{ add_pet_form.dob_field }}
+              {{ add_pet_form.special_field.label }}
+              {{ add_pet_form.special_field }}
+              <div class="fl_right">
+                <footer>{{ add_pet_form.submit_field (class_="btn") }}</footer>  
+                <br> 
+              </div>
+            </form>
+            <br>
+          </div>
+          <br>
+        </div>        
         </div>
     </article>
+        {% endif %}
+    
     <br><br><br><br>  
     <article>
       <button type="button" class="collapsible">Finances</button>
         <div class="content" style="color:black">
+          <form action='#' method='post'>
+          {{ finance_form.csrf_token}}
+
+
           <br>
-          <p>This is a test</p>
-          <p>This is a test</p>
-          <p>This is a test</p>
-          <p>This is a test</p>
-          <p>This is a test</p>
-        </div> 
-    </article>    
+          <p>Finance</p>
+          {% if is_ptct or is_ftct %}
+          {{ finance_form.bank_field.label }}
+          {{ finance_form.bank_field }}
+          {% endif %}
+          {% if is_po %}
+          {{ finance_form.credit_field.label }}
+          {{ finance_form.credit_field }}
+          {% endif %}
+          <div>
+            <br>
+          <button type="button" class="collapsible">Add Rates</button>
+          <div>
+            <br>
+            <p>Price Rate</p>
+          {{ finance_form.cat_rate.label }}
+          {{ finance_form.cat_rate }}
+          {{ finance_form.dog_rate.label }}
+          {{ finance_form.dog_rate }}
+          {{ finance_form.rabbit_rate.label }}
+          {{ finance_form.rabbit_rate }}
+          {{ finance_form.guinea_rate.label }}
+          {{ finance_form.guinea_rate }}
+          {{ finance_form.hamster_rate.label }}
+          {{ finance_form.hamster_rate }}
+          {{ finance_form.gerbil_rate.label }}
+          {{ finance_form.gerbil_rate }}
+          {{ finance_form.mouse_rate.label }}
+          {{ finance_form.mouse_rate }}
+          {{ finance_form.chinchilla_rate.label }}
+          {{ finance_form.chinchilla_rate }}
+          </div>
+          <div class="fl_right">
+            <footer>{{ finance_form.submit_field (class_="btn") }}</footer>  
+            <br> 
+            <br>
+          </div>
+          <br>
+        </div>
+        </form> 
+        </div>
+
+    </article>   
+    
     <script>
     var coll = document.getElementsByClassName("collapsible");
     var j;
