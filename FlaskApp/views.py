@@ -13,25 +13,28 @@ view = Blueprint("view", __name__)
 ## Creates a dictionary that handles logic across all pages.
 
 def panel_filler(user_role,userid):
-    panel = {'panel_ct':'','panel_po':'','profile':'/settings/','all_transact':'/transactions/'}
+    panel = {'panel_ct':'','panel_po':'','profile':'/settings','all_transact':'/transactions'}
     if 'po' in user_role:
         panel['panel_po'] = panel['panel_ct'] + '/po_home'
     elif 'ptct' in user_role:
         panel['panel_ct'] = panel['panel_ct'] +'/pt_home'
     elif 'ftct' in user_role:
         panel['panel_ct'] = panel['panel_ct'] + '/ft_home'
+    elif 'admin' in user_role:
+        pass
     else: 
         raise Exception('ValueError: There is no information on the user')
 
-    panel['profile'] = panel['profile'] + userid
+    panel['profile'] = panel['profile'] 
     panel['all_transact'] = panel['all_transact']
 
     return panel
                 
 
 def get_user_role(userid):
-    # query = 'SELECT user_type(\'{}\')'.format(userid)
     user_role = db.session.execute(func.user_type(userid)).fetchone()[0]
+    query = "SELECT COUNT(*) FROM admin WHERE userid = \'{}\'".format(userid)
+    is_admin = db.session.execute(query).fetchone()[0] > 0
     roles = []
     if 1 & user_role:
         roles.append('po')
@@ -39,6 +42,8 @@ def get_user_role(userid):
         roles.append('ptct')
     if 4 & user_role:
         roles.append('ftct')
+    if is_admin:
+        roles.append('admin')
     return '/'.join(str(i) for i in roles)
 
 
@@ -131,7 +136,6 @@ def render_login_page():
     form = LoginForm()
     userid = form.userid.data
     entered_password = form.password.data
-    email = form.email.data 
     if form.validate_on_submit():
         exists_user = db.session.execute(func.login(userid,entered_password)).fetchall()  
         if exists_user:
@@ -142,6 +146,9 @@ def render_login_page():
             ##Updates Session
             session['userid'] = userid
             user_role = get_user_role(userid)
+
+            query = "SELECT COUNT(*) FROM admin WHERE userid = \'{}\'"
+            is_admin = db.session.execute(query).fetchone()[0] > 0
 
             ## Handles panel page redirection                
             session['panel'] = panel_filler(user_role,userid)
@@ -165,7 +172,7 @@ def render_login_page():
 def render_settings():
     if 'userid' not in session:
         return redirect('login')
-
+    panel = session['panel']
     userid = session['userid']
     user_role = get_user_role(userid)
     name = db.session.query(func.find_name(userid)).all()[0][0]
@@ -246,7 +253,8 @@ def render_settings():
         finance_form = finance_form,
         is_po = 'po' in user_role,
         is_ptct = 'ptct' in user_role,
-        is_ftct = 'ftct' in user_role
+        is_ftct = 'ftct' in user_role,
+        panel = panel
     )
 
 @view.route("/deleteacc")
@@ -285,6 +293,7 @@ def render_po_home():
         return redirect('/login')
     
     ## initialising information required in web page
+    panel = session['panel']
     userid = session['userid']
     name = db.session.query(func.find_name(userid)).all()[0][0]
     data = db.session.query(func.po_upcoming_bookings('{}'.format(userid))).all()
@@ -308,19 +317,18 @@ def render_po_home():
         return redirect('/search/{}/{}/{}'.format(pet_select,start_date,end_date))
 
     for row in data:
-        href = "/booking/" + '/'.join(row[0][1:-1].split(",")) 
-        new = row[0][1:-1].split(",")
-        new.append(href)
-        print(new)
-        table.append(dict(zip(('pet_name','name', 'ct_userid', 'start_date', 'end_date', 'status','dead',"hrefstring"), new)))
+        row = row[0][1:-1].split(",")
+        href = "/po_booking/" + '/'.join(row[:4] + row[5:])
+        row.append(href)
+        "/po_booking/<pn>/<ct>/<sd>/<ed>/<d>"
+        print(row)
+        table.append(dict(zip(('pet_name','name', 'ct_userid', 'start_date', 'end_date', 'status','dead',"hrefstring"), row)))
 
     for item in ct:
         href = "/review_rating/"+ '/'.join(item[0][1:-1].split(","))
         new = item[0][1:-1].split(",")
         new.append(href)
         comp_trans.append(dict(zip(('pet_name','name','ctuserid','start_date','end_date','dead','hrefstring'), new))) 
-    
-    panel = session["panel"]
 
     return render_template("/5_PO_home.html",form = form, \
                                             name = name, \
@@ -335,6 +343,7 @@ def render_po_home():
 def render_search(pet_name,start_date,end_date):
     if 'userid' not in session:
         return redirect('/login')
+    panel = session['panel']
     userid = session['userid']
     search_result = db.session.query(func.bid_search(userid,pet_name,start_date,end_date)).all()
     result = [i[0] for i in search_result]
@@ -348,7 +357,8 @@ def render_search(pet_name,start_date,end_date):
         new.append(hrefbook)
         store.append(dict(zip(('name','avg_rating','ppd','hrefpast','hrefbook'), new))) 
     return render_template("/6_PO_search.html",search_result = search_result,\
-                                                store = store)
+                                                store = store,
+                                                panel = panel)
 
 
 ## Page 7a Pet Owner Accept Reject booking NO CHAT
@@ -356,6 +366,7 @@ def render_search(pet_name,start_date,end_date):
 def render_po_ar_booking(pn,ct,sd,ed,d):
     if 'userid' not in session:
         return redirect('/login')
+    panel = session['panel']
     userid = session['userid']
 
     cancel_form = CancelForm()
@@ -401,7 +412,8 @@ def render_po_ar_booking(pn,ct,sd,ed,d):
         sd = sd,
         ed = ed,
         cancel_form = cancel_form,
-        confirm_form = confirm_form
+        confirm_form = confirm_form,
+        panel = panel
     )
 
 ## Page 7b Caretaker Accept/Reject Page WITH CHAT
@@ -410,9 +422,8 @@ def render_ct_ar_booking(pn,po,sd,ed,d):
 
     if 'userid' not in session:
         return redirect('/login')
-
+    panel = session['panel']
     userid = session['userid']
-
     message_form = MessageForm()
     reject_form = RejectForm()
     accept_form = AcceptForm()
@@ -472,7 +483,8 @@ def render_ct_ar_booking(pn,po,sd,ed,d):
         chat_text = '\n\n'.join(chat_text),
         form = message_form,
         reject_form = reject_form,
-        accept_form = accept_form
+        accept_form = accept_form,
+        panel = panel
     ) ## TODO pet profile link
 
 ## Page 8a Pet Owner Confirmed booking page ## Pet Owner Sending Message
@@ -480,9 +492,8 @@ def render_ct_ar_booking(pn,po,sd,ed,d):
 def render_po_booking(pn,ct,sd,ed,d):
     if 'userid' not in session:
         return redirect('/login')
-
+    panel = session['panel']
     userid = session['userid']
-
     message_form = MessageForm()
 
     if message_form.validate_on_submit():
@@ -530,7 +541,8 @@ def render_po_booking(pn,ct,sd,ed,d):
         status = status,
         payment_op = payment_op,
         chat_text = '\n\n'.join(chat_text),
-        form = message_form
+        form = message_form,
+        panel = panel
     ) ## TODO pet profile link
 
 ##Page  8b Caretaker Confirm Booking Page
@@ -539,11 +551,9 @@ def render_ct_booking(pn,po,sd,ed,d):
 
     if 'userid' not in session:
         return redirect('/login')
-
+    panel = session['panel']
     userid = session['userid']
-
     message_form = MessageForm()
-
     if message_form.validate_on_submit():
         text = message_form.text_field.data ##if you see 2 its caretaker sending
         query = 'INSERT INTO Chat VALUES (\'{}\', \'{}\', \'{}\', {}, \'{}\', \'{}\', \'{}\', 2, \'{}\')'.format(
@@ -586,7 +596,8 @@ def render_ct_booking(pn,po,sd,ed,d):
         status = status,
         payment_op = payment_op,
         chat_text = '\n\n'.join(chat_text),
-        form = message_form
+        form = message_form,
+        panel = panel
     ) ## TODO pet profile link
 
 ## Page 9 All transactions
@@ -597,6 +608,7 @@ def render_transactions_page():
     #session['userid'] = 'deverton82'
     if 'userid' not in session:
         return redirect('/login')
+    panel = session['panel']
     userid = session['userid']
     all_transac = db.session.query(func.all_your_transac(userid)).all() # (ct_userid 0, po_userid 1, pet_name 2, dead 3, start_date 4, end_date 5, status 6, rating 7)
     #ct_userid 0, po_userid 1, pet_name 2, start_date 3, end_date 4, status 5, rating 6, dead 7
@@ -615,7 +627,7 @@ def render_transactions_page():
         new[7] = href
         print(new)
         table.append(dict(zip(('ct_name','po_name', 'pet_name', 'start_date', 'end_date', 'status', 'rating', 'hrefstring'), new))) # completed and not reviewed -> review booking ELSE view booking
-    return render_template("/9_all_transactions.html", table = table)
+    return render_template("/9_all_transactions.html", table = table,panel = panel)
 
 
 
@@ -625,6 +637,7 @@ def render_transactions_page():
 def render_ct_review(ct_userid):
     if 'userid' not in session:
         return redirect('/login')
+    panel = session['panel']
     search_result = db.session.query(func.ct_reviews(ct_userid)).all()
     table = []
     for row in search_result:
@@ -633,7 +646,8 @@ def render_ct_review(ct_userid):
         new[0] = db.session.query(func.find_name(new[0])).all()[0][0]
         new = new[:4] + new[5:]
         table.append(dict(zip(('userid', 'pet_name', 'start_date', 'end_date','rating',"review"), new)))
-    return render_template("/10_CT_review.html", table = table)
+    return render_template("/10_CT_review.html", table = table,
+                                                    panel = panel)
 
 ## Page 11 Write Review Ratings
 
@@ -641,6 +655,7 @@ def render_ct_review(ct_userid):
 def render_review_rating(pn,ct,sd,ed,d):
     if 'userid' not in session: 
         return redirect('/login')
+    panel = session['panel']
     userid = session['userid']
     pet_type = db.session.query(func.find_pettype(userid, pn, d)).all()[0][0]
     duration = (date(*(int(i) for i in ed.split('-'))) - date(*(int(i) for i in sd.split('-')))).days + 1
@@ -672,7 +687,8 @@ def render_review_rating(pn,ct,sd,ed,d):
         total = round(trans_pr, 2),
         status = status,
         payment_op = payment_op,
-        form = form
+        form = form,
+        panel = panel
     )
 
 ## Page 12a Full time caretaker home page 
@@ -682,7 +698,7 @@ def render_ft_home():
     ## redirects if the person is not logged in
     if 'userid' not in session:
         return redirect('/login')
-        
+    panel = session['panel']
     name = session['name']
     #userid = session['userid']
     userid = 'deverton82' ## change this later
@@ -707,7 +723,8 @@ def render_ft_home():
     
     return render_template("/12_FT_home.html", name = name,
         upcoming_jobs = upcoming_jobs,
-        has_upcoming = (len(upcoming_jobs) > 0))
+        has_upcoming = (len(upcoming_jobs) > 0),
+        panel = panel)
 
 ## Page 12b Part time caretaker home page
 @view.route("/pt_home",methods=["GET", "POST"])
@@ -717,24 +734,9 @@ def render_pt_home():
     if 'userid' not in session:
         return redirect('/login')
     
-    name = session['name']
-
-    #userid = session['userid']
-    userid = 'aneildy' ## change this later
-    if 'user_role' not in session:
-        user_role = get_user_role(userid)
-        session['user_role'] = user_role
-    user_role = session['user_role']
-    if 'ftct' in user_role:
-        return redirect('/ft_home')
-    elif 'ptct' not in user_role:
-        return redirect('/po_home')
-
-    ## need to create logic if 
-    ## person is not caretaker 
-    ## person is not PT caretaker
-    ## person does not have any upcoming and pending jobs
-    ## person does not have either one job
+    panel = session['panel']
+    userid = session['userid']
+    name = db.session.query(func.find_name(userid)).all()[0][0] 
 
     data_upcoming = db.session.query(func.ftpt_upcoming(userid)).all()
     data_pending = db.session.query(func.ftpt_pending(userid)).all()
@@ -751,7 +753,8 @@ def render_pt_home():
         upcoming_jobs = upcoming_jobs,
         has_upcoming = (len(upcoming_jobs) > 0),
         pending_jobs = pending_jobs,
-        has_pending = (len(pending_jobs) > 0))
+        has_pending = (len(pending_jobs) > 0),
+        panel = panel)
 
 ## Page 13a FT Leave Apply
 
@@ -759,6 +762,7 @@ def render_pt_home():
 def render_FT_leave_apply():
     if 'userid' not in session:
         return redirect('/login')
+    panel = session['panel']
     userid = session['userid']
     form = AddFT_leave()
     name = db.session.query(func.find_name(userid)).all()[0][0] 
@@ -776,7 +780,7 @@ def render_FT_leave_apply():
         href = "/delete_ft_leave/" + userid  +'/'+ '/'.join(row[0][1:-1].split(","))
         d["href"] = href
         table.append(d)
-    return render_template("/13_FT_leave.html", table = table, name = name, form = form)
+    return render_template("/13_FT_leave.html", table = table, name = name, form = form,panel = panel)
 
 ## After delete leave, it will redirect to this page. 
 
@@ -792,6 +796,7 @@ def delete_FT_leave(userid, sd, ed):
 def render_PT_declare_avail():
     if 'userid' not in session:
         return redirect('/login')
+    panel = session['panel']
     userid = session['userid']
     form = AddPT_avail()
     name = db.session.query(func.find_name(userid)).all()[0][0] 
@@ -809,7 +814,7 @@ def render_PT_declare_avail():
         href = "/delete_pt_avail/" + userid  +'/'+ '/'.join(row[0][1:-1].split(","))
         d["href"] = href
         table.append(d)
-    return render_template("/13_PT_avail.html", table = table, name = name, form = form)
+    return render_template("/13_PT_avail.html", table = table, name = name, form = form,panel = panel)
 
 ## After delete pt avail, it will refresh to the pt avail page
 
@@ -825,6 +830,7 @@ def delete_PT_leave(userid, sd, ed):
 def render_check_salary():
     if 'userid' not in session:
         return redirect('/login')
+    panel = session['panel']
     userid = session["userid"]
     user_role = get_user_role(userid)
     _MONTH_LOOKUP = {1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June',
@@ -839,7 +845,7 @@ def render_check_salary():
         d['yr'] = yr
         d['full_month'] = _MONTH_LOOKUP[int(mth)]
         table.append(d)
-    return render_template("14_salary.html", table = table)
+    return render_template("14_salary.html", table = table,panel = panel)
 
 
 
@@ -849,6 +855,7 @@ def render_check_salary():
 def render_FTsalary_breakdown(month, year):
     if 'userid' not in session:
         return redirect('/login')
+    panel = session['panel']
     userid = session['userid']
     month = int(month)
     _MONTH_LOOKUP = {1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June',
@@ -866,7 +873,15 @@ def render_FTsalary_breakdown(month, year):
     avg_trans_amt = total_amt_for_mnth/pet_days
     bonus = (pet_days - 60)*0.8
     total_salary = bonus + 3000
-    return render_template("/15_FT_salary_breakdown.html", month = month, year = year, pet_days = pet_days, total_amt_for_mnth = total_amt_for_mnth, avg_trans_amt = avg_trans_amt, bonus = bonus, total_salary = total_salary, table = table)
+    return render_template("/15_FT_salary_breakdown.html", month = month, 
+                                                            year = year, 
+                                                            pet_days = pet_days, 
+                                                            total_amt_for_mnth = total_amt_for_mnth, 
+                                                            avg_trans_amt = avg_trans_amt, 
+                                                            bonus = bonus, 
+                                                            total_salary = total_salary, 
+                                                            table = table,
+                                                            panel = panel)
 
 
 ## Page 15b Part time salary breakdown
@@ -875,6 +890,7 @@ def render_FTsalary_breakdown(month, year):
 def render_PTsalary_breakdown(month, year):
     if 'userid' not in session:
         return redirect('/login')
+    panel = session['panel']
     userid = session['userid']
     month = int(month)
     _MONTH_LOOKUP = {1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June',
@@ -889,7 +905,12 @@ def render_PTsalary_breakdown(month, year):
         table.append(dict(zip(('po_name', 'pet_name', 'start_date', 'end_date','rate','trans_amt'), new)))
     total_amt_for_mnth = db.session.query(func.total_trans_pr_mnth(userid, year, month)).all()[0][0]
     total_salary = total_amt_for_mnth*0.75
-    return render_template("/15_PT_salary_breakdown.html", month = month, year = year, total_amt_for_mnth = total_amt_for_mnth, total_salary = total_salary, table = table)
+    return render_template("/15_PT_salary_breakdown.html", month = month, 
+                                                            year = year, 
+                                                            total_amt_for_mnth = total_amt_for_mnth, 
+                                                            total_salary = total_salary, 
+                                                            table = table,
+                                                            panel = panel)
 
 ## Page 16 Pet profile page
 
@@ -897,12 +918,17 @@ def render_PTsalary_breakdown(month, year):
 def render_pet_profile(po_userid,pn,d):
     if 'userid' not in session:
         return redirect('/login')
+    panel = session['panel']
     po_name = db.session.query(func.find_name(po_userid)).all()[0][0]    
     pet_type = db.session.query(func.find_pettype(po_userid, pn, d)).all()[0][0]
     spec_req = db.session.query(func.find_specreq(po_userid, pn, d)).all()[0][0]
     birthday = db.session.query(func.find_birthday(po_userid, pn)).all()[0][0]
-    return render_template("/16_Pet_profile.html", pet_name = pn, po_name = po_name, pet_type = pet_type,
-                           birthday = birthday, spec_req = spec_req)
+    return render_template("/16_Pet_profile.html", pet_name = pn, 
+                                                    po_name = po_name, 
+                                                    pet_type = pet_type,
+                                                    birthday = birthday, 
+                                                    spec_req = spec_req,
+                                                    panel = panel)
 
 ## Page 17a Admin home page
 
@@ -910,6 +936,7 @@ def render_pet_profile(po_userid,pn,d):
 def render_admin_home():
     if 'userid' not in session:
         return redirect('/login')
+    panel = session['panel']
     mod_form = Admin_modify_price()
     stats_search = Admin_stat_search()
 
@@ -927,7 +954,9 @@ def render_admin_home():
         mth = str(stats_search.month_field.data)
         yr = stats_search.year_field.data
         return redirect('/admin_stats/' + mth + '/' + yr)
-    return render_template("17_admin_home.html", mod_form = mod_form, stats_search = stats_search)
+    return render_template("17_admin_home.html", mod_form = mod_form, 
+                                                    stats_search = stats_search,
+                                                    panel = panel)
 
 ## Page 17b Admin Statistics
 
@@ -935,6 +964,7 @@ def render_admin_home():
 def render_admin_stats(month, year):
     if 'userid' not in session:
         return redirect('/login')
+    panel = session['panel']
     month = int(month)
     year = int(year)
     revenue = db.session.query(func.admin_revenue_this_mnth(year, month)).all()[0][0]
@@ -994,7 +1024,8 @@ def render_admin_stats(month, year):
                                                 bd_pet_table = bd_pet_table,\
                                                 under_perf_table = under_perf_table, \
                                                 well_perf_table = well_perf_table, \
-                                                val_PO_table = val_PO_table)
+                                                val_PO_table = val_PO_table,
+                                                panel = panel)
 
 
 ##Page 18 Admin add fulltime employee page
@@ -1002,6 +1033,7 @@ def render_admin_stats(month, year):
 def render_addFT():
     if 'userid' not in session:
         return redirect('/login')
+    panel = session['panel']
     form = AddFT()
     if form.validate_on_submit():
         userid = form.userid.data
@@ -1043,7 +1075,8 @@ def render_addFT():
                 roles += '/'
             roles += 'ftct'
         return redirect("/admin_home.html")
-    return render_template("18_addFT.html", form=form)
+    return render_template("18_addFT.html", form=form,
+                                            panel = panel)
 
 
 ##Page ?? Logout page

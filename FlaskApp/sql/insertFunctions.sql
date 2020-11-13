@@ -449,11 +449,11 @@ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION po_upcoming_bookings(userid VARCHAR)
-RETURNS TABLE (pet_name VARCHAR, ct_userid VARCHAR, start_date DATE, end_date DATE, status VARCHAR,dead INTEGER) AS
+RETURNS TABLE (pet_name VARCHAR, name VARCHAR, ct_userid VARCHAR, start_date DATE, end_date DATE, status VARCHAR,dead INTEGER) AS
 $func$
 BEGIN
   RETURN QUERY(
- SELECT b.pet_name,c.name,b.start_date,b.end_date,b.status,b.dead FROM(
+ SELECT b.pet_name,c.name,b.ct_userid,b.start_date,b.end_date,b.status,b.dead FROM(
   SELECT a.pet_name, a.ct_userid, a.start_date, a.end_date, a.status, a.dead FROM Looking_After a
  WHERE a.po_userid = po_upcoming_bookings.userid AND a.status != 'Rejected' AND a.status != 'Completed') AS b
   INNER JOIN 

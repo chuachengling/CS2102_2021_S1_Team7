@@ -35,7 +35,7 @@ app.config["SECRET_KEY"] = "A random key to use flask extensions that require en
 
 # Initialize other components
 db.init_app(app)
-login_manager.init_app(app)
+# login_manager.init_app(app)
 
 with app.app_context():
     initFile = open(('' if _LOCAL_TESTING else '../FlaskApp/') + 'sql/init.sql', 'r')

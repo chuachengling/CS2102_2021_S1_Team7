@@ -83,11 +83,6 @@ class LoginForm(FlaskForm):
         validators=[InputRequired()],
         render_kw={'placeholder': 'Username'}
     )
-    email = StringField(
-        label='Email',
-        validators=[InputRequired(), Email(message = 'Invalid email')],
-        render_kw={'placeholder': 'Email'}
-    )
     password = PasswordField(
         label='Password',
         validators=[InputRequired()],
