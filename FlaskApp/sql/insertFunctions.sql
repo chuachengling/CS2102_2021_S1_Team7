@@ -1,8 +1,4 @@
--- ADMIN HOMEPAGE --
--- Total number of pets cared for this month, + the breakdown into categories
--- Under/Overperforming FTCT
--- Total revenue/salary this month + salary breakdown
--- Most valuable petowners? output transactions price
+
 CREATE OR REPLACE FUNCTION admin_modify_base(pettype VARCHAR, price FLOAT4)
 RETURNS VOID AS
 $func$
@@ -578,13 +574,13 @@ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION pastTransactions (userid VARCHAR)
-RETURNS TABLE (po_name VARCHAR, ct_name VARCHAR, pet_name VARCHAR, dead INTEGER, start_date DATE, end_date DATE) AS
+RETURNS TABLE (po_name VARCHAR, ct_name VARCHAR,ct_userid VARCHAR, pet_name VARCHAR, dead INTEGER, start_date DATE, end_date DATE) AS
 $func$
 BEGIN
 RETURN QUERY(
- SELECT (SELECT u.name FROM Users u WHERE u.userid = la.po_userid) AS po_name, (SELECT u.name FROM Users u WHERE u.userid = la.ct_userid) AS ct_name, la.pet_name, la.dead, la.start_date, la.end_date
+ SELECT (SELECT u.name FROM Users u WHERE u.userid = la.po_userid) AS po_name, (SELECT u.name FROM Users u WHERE u.userid = la.ct_userid) AS ct_name, la.ct_userid,la.pet_name, la.dead, la.start_date, la.end_date
  FROM Looking_After la
- WHERE (la.po_userid = pastTransactions.userid OR la.ct_userid = pastTransactions.userid) AND la.status = 'Completed');
+ WHERE (la.po_userid = pastTransactions.userid OR la.ct_userid = pastTransactions.userid) AND la.status = 'Completed' AND la.review = NULL);
 END;
 $func$
 LANGUAGE plpgsql;
@@ -727,7 +723,7 @@ LANGUAGE plpgsql;
 
 -- Page 10
 CREATE OR REPLACE FUNCTION ct_reviews(userid VARCHAR)
-RETURNS TABLE (ct_userid VARCHAR, po_userid VARCHAR, pet_name VARCHAR, start_date DATE, end_date DATE, status VARCHAR, rating FLOAT4, review VARCHAR) AS
+RETURNS TABLE (ct_userid VARCHAR, po_userid VARCHAR, pet_name VARCHAR, start_date DATE, end_date DATE, status VARCHAR, rating FLOAT8, review VARCHAR) AS
 $func$
 BEGIN
 RETURN QUERY(

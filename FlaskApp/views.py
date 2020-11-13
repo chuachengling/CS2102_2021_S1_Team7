@@ -158,8 +158,10 @@ def render_login_page():
             elif 'ptct' in user_role:
                 return redirect("/pt_home")
             elif 'ftct' in user_role:
-                return redirect("/ft_home")
-            else: ##TODO admin redirect
+                return redirect("/ft_home") 
+            elif 'admin' in user_role:
+                return redirect("/admin_home")
+            else: 
                 return redirect("/registration")    
         else:
             ## Need to think how to reset the page and tell user password is wrong
@@ -318,17 +320,19 @@ def render_po_home():
 
     for row in data:
         row = row[0][1:-1].split(",")
-        href = "/po_booking/" + '/'.join(row[:4] + row[5:])
+
+        href = "/po_booking/" + '/'.join([row[0]] + row[2:5] + [row[6]])
+
         row.append(href)
         "/po_booking/<pn>/<ct>/<sd>/<ed>/<d>"
-        print(row)
-        table.append(dict(zip(('pet_name','name', 'ct_userid', 'start_date', 'end_date', 'status','dead',"hrefstring"), row)))
+
+        table.append(dict(zip(('pet_name', 'name', 'ct_userid', 'start_date', 'end_date', 'status','dead',"hrefstring"), row)))
 
     for item in ct:
-        href = "/review_rating/"+ '/'.join(item[0][1:-1].split(","))
-        new = item[0][1:-1].split(",")
-        new.append(href)
-        comp_trans.append(dict(zip(('pet_name','name','ctuserid','start_date','end_date','dead','hrefstring'), new))) 
+        row = item[0][1:-1].split(",")
+        href = "/write_review_rating/{}/{}/{}/{}/{}".format(row[3], row[2], row[5], row[6], row[4])
+        row.append(href)
+        comp_trans.append(dict(zip(('po_name', 'name', 'ct_userid', 'pet_name', 'dead', 'start_date', 'end_date', 'hrefstring'), row))) 
 
     return render_template("/5_PO_home.html",form = form, \
                                             name = name, \
@@ -352,7 +356,7 @@ def render_search(pet_name,start_date,end_date):
         biddetails = db.session.query(func.bidDetails(row,userid,pet_name)).all()[0]
         new = biddetails[0][1:-1].split(",")
         hrefpast = "/ct_review/" + row
-        hrefbook = "/po_ar_booking/" + pet_name +"/"+ new[0] + "/" + start_date + "/" + end_date + "/" + "0"
+        hrefbook = "/po_ar_booking/" + pet_name +"/"+ row + "/" + start_date + "/" + end_date + "/" + "0"
         new.append(hrefpast)
         new.append(hrefbook)
         store.append(dict(zip(('name','avg_rating','ppd','hrefpast','hrefbook'), new))) 
@@ -610,7 +614,8 @@ def render_transactions_page():
         return redirect('/login')
     panel = session['panel']
     userid = session['userid']
-    all_transac = db.session.query(func.all_your_transac(userid)).all() # (ct_userid 0, po_userid 1, pet_name 2, dead 3, start_date 4, end_date 5, status 6, rating 7)
+    all_transac = db.session.query(func.all_your_transac(userid)).all()
+    # (ct_userid 0, po_userid 1, pet_name 2, dead 3, start_date 4, end_date 5, status 6, rating 7)
     #ct_userid 0, po_userid 1, pet_name 2, start_date 3, end_date 4, status 5, rating 6, dead 7
     table = list()
     for row in all_transac:
@@ -619,13 +624,14 @@ def render_transactions_page():
             href = "/write_review_rating/"+'/'.join((new[1], new[2],new[0],new[4], new[5], new[3]))
            # <userid>"/<pn>/<ct>/<sd>/<ed>/<d>"
            # + '/'.join(row[0][1:-1].split(","))
-        else:
-            href = "/booking/" +'/'.join((new[2], new[0], new[4], new[5], new[6], new[3]))
+        elif new[1] == userid: # po is me --> show po_booking
+            href = "/po_booking/" +'/'.join((new[2], new[0], new[4], new[5], new[3]))
             #<pn>/<ct>/<sd>/<ed>/<st>/<d>
+        elif new[0] == userid: # ct is me --> show ct_booking
+            href = '/ct_booking/' + '/'.join((new[2], new[1], new[4], new[5], new[3]))
         new[0] = db.session.query(func.find_name(new[0])).all()[0][0] # ct_name
         new[1] = db.session.query(func.find_name(new[1])).all()[0][0] # po_name
         new[7] = href
-        print(new)
         table.append(dict(zip(('ct_name','po_name', 'pet_name', 'start_date', 'end_date', 'status', 'rating', 'hrefstring'), new))) # completed and not reviewed -> review booking ELSE view booking
     return render_template("/9_all_transactions.html", table = table,panel = panel)
 
@@ -1005,7 +1011,6 @@ def render_admin_stats(month, year):
     val_PO = db.session.query(func.admin_valuable_po(year, month)).all()
     val_PO_table = list()
     for row in val_PO:
-        print(row)
         new = list(csv.reader([row[0][1:-1]]))[0]
         new.append(db.session.query(func.find_name(new[0])).all()[0][0])
         new[1] = '${:.02f}'.format(round(float(new[1]), 2))
