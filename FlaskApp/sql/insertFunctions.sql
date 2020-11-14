@@ -7,6 +7,7 @@ CREATE OR REPLACE FUNCTION admin_modify_base(pettype VARCHAR, price FLOAT4)
 RETURNS VOID AS
 $func$
 BEGIN
+UPDATE pet_type SET price = admin_modify_base.price
   WHERE pet_type = admin_modify_base.pettype;
 END;
 $func$
