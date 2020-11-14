@@ -357,12 +357,11 @@ $func$
 BEGIN
   UPDATE Accounts
   SET deactivate = TRUE
-  WHERE Accounts.userid = deleteacc.userid
+  WHERE Accounts.userid = deleteacc.userid;
 
   UPDATE Looking_After la
   SET status = 'Rejected'
-  WHERE la.ct_userid = deleteacc.userid AND (la.status = 'Pending' OR la.status = 'Accepted')
-  ;
+  WHERE la.ct_userid = deleteacc.userid AND (la.status = 'Pending' OR la.status = 'Accepted');
 END;
 $func$
 LANGUAGE plpgsql;
@@ -657,7 +656,7 @@ CREATE OR REPLACE FUNCTION what_trans_pr(ct_userid VARCHAR, po_userid VARCHAR, p
 RETURNS FLOAT4 AS
 $func$
 BEGIN
-  RETURN((sd-ed+1)*find_rate(what_trans_pr.ct_userid, find_pettype(what_trans_pr.po_userid, what_trans_pr.pet_name, what_trans_pr.dead)));
+  RETURN((ed-sd+1)*find_rate(what_trans_pr.ct_userid, find_pettype(what_trans_pr.po_userid, what_trans_pr.pet_name, what_trans_pr.dead)));
 END;
 $func$
 LANGUAGE plpgsql;
