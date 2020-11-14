@@ -182,6 +182,8 @@ def render_settings():
     personal_form = PersonalUpdateForm()
     add_pet_form = AddPetForm()
     finance_form = FinanceUpdateForm()
+    pairs = [('Cat', finance_form.cat_rate), ('Dog', finance_form.dog_rate), ('Rabbit', finance_form.rabbit_rate), ('Guinea pig', finance_form.guinea_rate),
+        ('Hamster', finance_form.hamster_rate), ('Gerbil', finance_form.gerbil_rate), ('Mouse', finance_form.mouse_rate), ('Chinchilla', finance_form.chinchilla_rate)]
 
     if 'handphone_field' in request.form:
         if personal_form.handphone_field.data:
@@ -215,8 +217,6 @@ def render_settings():
             if all('0' <= i <= '9' for i in credit) and len(credit) == 16:
                 db.session.execute(func.editCredit(userid, credit))
                 db.session.commit()
-        pairs = [('Cat', finance_form.cat_rate), ('Dog', finance_form.dog_rate), ('Rabbit', finance_form.rabbit_rate), ('Guinea pig', finance_form.guinea_rate),
-            ('Hamster', finance_form.hamster_rate), ('Gerbil', finance_form.gerbil_rate), ('Mouse', finance_form.mouse_rate), ('Chinchilla', finance_form.chinchilla_rate)]
         for animal, field in pairs:
             if field.data:
                 try:
@@ -234,6 +234,13 @@ def render_settings():
                 db.session.commit()
 
         return redirect('/settings')
+
+    existingPrices = []
+    for animal, _ in pairs:
+        valid = db.session.execute(func.find_valid(userid, animal)).fetchone()[0]
+        if valid:
+            price = '${:.02f}'.format(db.session.execute(func.find_rate(userid, animal)).fetchone()[0])
+        existingPrices.append(price if valid else '0')
 
     all_pets = db.session.query(func.all_POpets_deets(userid)).all() # (pet_name VARCHAR, pet_type VARCHAR, dob DATE, special_req VARCHAR)
     table = list()
@@ -256,7 +263,8 @@ def render_settings():
         is_po = 'po' in user_role,
         is_ptct = 'ptct' in user_role,
         is_ftct = 'ftct' in user_role,
-        panel = panel
+        panel = panel,
+        **dict(zip((i[0].replace(' ', '_') for i in pairs), existingPrices))
     )
 
 @view.route("/deleteacc")
@@ -704,10 +712,11 @@ def render_ft_home():
     ## redirects if the person is not logged in
     if 'userid' not in session:
         return redirect('/login')
+    userid = session['userid']
     panel = session['panel']
-    name = session['name']
+    name = db.session.query(func.find_name(userid)).all()[0][0] 
     #userid = session['userid']
-    userid = 'deverton82' ## change this later
+    # userid = 'deverton82' ## change this later
     # if 'user_role' not in session:
     user_role = get_user_role(userid)
     session['user_role'] = user_role

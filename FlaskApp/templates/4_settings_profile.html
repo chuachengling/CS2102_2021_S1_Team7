@@ -171,27 +171,30 @@ Licence URI: https://www.os-templates.com/template-terms
           {% endif %}
           <div>
             <br>
+            {% if is_ptct or is_ftct %}
           <button type="button" class="collapsible">Add Rates</button>
           <div>
             <br>
             <p>Price Rate</p>
-          {{ finance_form.cat_rate.label }}
+            <p>A positive number next to each pet class represents the price you are charging per day. A '0' represents that you are not looking to take care of that pet class. To indicate interest to take care of a particular pet type, fill in the blank with your desired daily price. To stop taking care of a particular pet class, input a '0'.</p>
+          Cat ({{Cat}})
           {{ finance_form.cat_rate }}
-          {{ finance_form.dog_rate.label }}
+          Dog ({{Dog}})
           {{ finance_form.dog_rate }}
-          {{ finance_form.rabbit_rate.label }}
+          Rabbit ({{Rabbit}})
           {{ finance_form.rabbit_rate }}
-          {{ finance_form.guinea_rate.label }}
+          Guinea pig ({{Guinea_pig}})
           {{ finance_form.guinea_rate }}
-          {{ finance_form.hamster_rate.label }}
+          Hamster ({{Hamster}})
           {{ finance_form.hamster_rate }}
-          {{ finance_form.gerbil_rate.label }}
+          Gerbil ({{Gerbil}})
           {{ finance_form.gerbil_rate }}
-          {{ finance_form.mouse_rate.label }}
+          Mouse ({{Mouse}})
           {{ finance_form.mouse_rate }}
-          {{ finance_form.chinchilla_rate.label }}
+          Chinchilla ({{Chinchilla}})
           {{ finance_form.chinchilla_rate }}
           </div>
+          {% endif %}
           <div class="fl_right">
             <footer>{{ finance_form.submit_field (class_="btn") }}</footer>  
             <br> 
@@ -201,7 +204,6 @@ Licence URI: https://www.os-templates.com/template-terms
         </div>
         </form> 
         </div>
-
     </article>   
     
     <script>

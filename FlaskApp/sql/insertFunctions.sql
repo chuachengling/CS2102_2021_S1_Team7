@@ -650,6 +650,18 @@ END;
 $func$
 LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION find_valid(query_userid VARCHAR, pettype VARCHAR)
+RETURNS BOOLEAN AS
+$func$
+BEGIN
+  IF (SELECT ct.full_time FROM Caretaker ct WHERE ct.ct_userid = query_userid) THEN
+    RETURN (SELECT EXISTS(SELECT * FROM FT_validpet ftvp WHERE ftvp.ct_userid = query_userid AND ftvp.pet_type = pettype));
+  ELSE
+    RETURN (SELECT EXISTS(SELECT * FROM PT_validpet ptvp WHERE ptvp.ct_userid = query_userid AND ptvp.pet_type = pettype));
+  END IF;
+END;
+$func$
+LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION find_card(userid VARCHAR)
