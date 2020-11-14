@@ -10,10 +10,10 @@ Licence URI: https://www.os-templates.com/template-terms
 <html lang="">
 <!-- To declare your language - read more here: https://www.w3.org/International/questions/qa-html-language-declarations -->
 <head>
-<title>Pet Stealer</title>
+<title>All Transactions</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link href="static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
+<link href="../../../../../../static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
 </head>
 <body id="top">
 <!-- ################################################################################################ -->
@@ -22,10 +22,11 @@ Licence URI: https://www.os-templates.com/template-terms
 <div class="wrapper row0">
   <div id="topbar" class="hoc clear"> 
     <!-- ################################################################################################ -->
+    <a class="btn" href="/logout">Logout</a>
     <div class="fl_right">
       <ul class="nospace">
-        <li><i class="fas fa-phone rgtspace-5"></i> +65 XXXX XXXX</li>
-        <li><i class="fas fa-envelope rgtspace-5"></i> XXXX@domain.com</li>
+        <li><i class="fas fa-phone rgtspace-5"></i> +65 6566 6656</li>
+        <li><i class="fas fa-envelope rgtspace-5"></i> info@petswecare.com</li>
       </ul>
     </div>
     <!-- ################################################################################################ -->
@@ -38,19 +39,18 @@ Licence URI: https://www.os-templates.com/template-terms
   <header id="header" class="hoc clear"> 
     <!-- ################################################################################################ -->
     <div id="logo" class="one_quarter first">
-      <h1><a href="12_FT_home.html">Care Taker</a></h1> <!-- depends if CO and CT overlap -->
+      <h1><a href={{panel.panel_ct}}>Care Taker</a></h1> <!-- depends if CO and CT overlap -->
     </div>
-    
     <div id="logo" class="one_quarter">
-      <h1><a href="5_PO_home.html">Pet Owner</a></h1>
+      <h1><a href={{panel.panel_po}}>Pet Owner</a></h1>
     </div>
       
     <div id="logo" class="one_quarter">
-      <h1><a href="4_settings_profile.html">Profile</a></h1>
+      <h1><a href={{panel.profile}}>Profile</a></h1>
     </div>
     
     <div id="logo" class="one_quarter">
-      <h1><a href="9_all_transactions.html">All Transactions</a></h1>
+      <h1><a href={{panel.all_transact}}>All Transactions</a></h1>
     </div>
     <!-- ################################################################################################ -->
   </header>
@@ -58,7 +58,7 @@ Licence URI: https://www.os-templates.com/template-terms
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
-<div class="wrapper bgded overlay" style="background-image:url('static/images_website/bgg.png');">
+<div class="wrapper bgded overlay" style="background-image:url('../../../../../../static/images_website/bgg.png');">
   <div id="pageintro" class="hoc clear"> 
     <!-- ################################################################################################ -->
     <article>
@@ -66,7 +66,7 @@ Licence URI: https://www.os-templates.com/template-terms
         	<h2 class="heading">My Transactions</h2>
       	</div>
     	<div class="fl_right"> 
-      		<a class="btn" href="14_salary.html">Check My Salary!</a> <!-- for CT ONLY -->
+      		<!--<a class="btn" href="14_salary.html">Check My Salary!</a>  for CT ONLY -->
     	</div>
     	<br>
     	<br>
@@ -82,9 +82,21 @@ Licence URI: https://www.os-templates.com/template-terms
             <th>End Date</th>
             <th>Status</th>
             <th>Rating</th>
-            <th>Review</th>
-            <th>View Booking</th>
+            <th>      </th>
         </tr>
+        {% for item in table %}
+          <tr style="color:black">
+            <td>{{item.ct_name}}</td>
+            <td>{{item.po_name}}</td>
+            <td>{{item.pet_name}}</td>
+            <td>{{item.start_date}}</td>
+            <td>{{item.end_date}}</td>
+            <td>{{item.status}}</td>
+            <td>{{item.rating}}</td>
+            <td><a class="btn" href="{{item.hrefstring}}">VIEW/REVIEW</a></td> <!--# completed and not reviewed -> review booking ELSE view booking -->
+          </tr>
+          {% endfor %}
+          <!---
         <tr style="color: black">
         	<td>caretaker#1</td>
             <td>pet_owner#1</td>
@@ -93,9 +105,10 @@ Licence URI: https://www.os-templates.com/template-terms
             <td>DDMMYY</td>
             <td>Status</td>
             <td>Rating</td>
-            <td><a class = "smallbtn" href="11_review_rating.html">REVIEW</a></td> <!-- if it is NULL-->
-            <td><a class = "smallbtn" href="8_PO_confirm_chat.html">VIEW</a></td>
+            <td><a class = "smallbtn" href="11_review_rating.html">REVIEW</a></td>--> 
+            <!--<td><a class = "smallbtn" href="8_PO_confirm_chat.html">VIEW</a></td>
         </tr>
+        -->
     </table>
 
 </div>

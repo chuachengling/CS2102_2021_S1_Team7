@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<!--
+Template Name: Bistup
+Author: <a href="https://www.os-templates.com/">OS Templates</a>
+Author URI: https://www.os-templates.com/
+Copyright: OS-Templates.com
+Licence: Free to use under our free template licence terms
+Licence URI: https://www.os-templates.com/template-terms
+-->
+<html lang="">
+<!-- To declare your language - read more here: https://www.w3.org/International/questions/qa-html-language-declarations -->
+<head>
+<title>Admin Homepage</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link href="../../../../../../static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
+</head>
+<body id="top">
+<!-- ################################################################################################ -->
+<!-- ################################################################################################ -->
+<!-- ################################################################################################ -->
+<div class="wrapper row0">
+  <div id="topbar" class="hoc clear"> 
+    <!-- ################################################################################################ -->
+    <a class="btn" href="/logout">Logout</a>
+    <div class="fl_right">
+      <ul class="nospace">
+        <li><i class="fas fa-phone rgtspace-5"></i> +65 6566 6656</li>
+        <li><i class="fas fa-envelope rgtspace-5"></i> info@petswecare.com</li>
+      </ul>
+    </div>
+    <!-- ################################################################################################ -->
+  </div>
+</div>
+<!-- ################################################################################################ -->
+<!-- ################################################################################################ -->
+<!-- ################################################################################################ -->
+<div class="wrapper row1">
+  <header id="header" class="hoc clear"> 
+    <!-- ################################################################################################ -->
+    <div id="logo" class="one_quarter first">
+      <h1><a href={{panel.panel_ct}}>Care Taker</a></h1> <!-- depends if CO and CT overlap -->
+    </div>
+    <div id="logo" class="one_quarter">
+      <h1><a href={{panel.panel_po}}>Pet Owner</a></h1>
+    </div>
+      
+    <div id="logo" class="one_quarter">
+      <h1><a href={{panel.profile}}>Profile</a></h1>
+    </div>
+    
+    <div id="logo" class="one_quarter">
+      <h1><a href={{panel.all_transact}}>All Transactions</a></h1>
+    </div>
+    <!-- ################################################################################################ -->
+  </header>
+</div>
+<!-- ################################################################################################ -->
+<!-- ################################################################################################ -->
+<!-- ################################################################################################ -->
+<div class="wrapper bgded overlay" style="background-image:url('../../../../../../static/images_website/bgg.png');">
+  <div id="pageintro" class="hoc clear"> 
+    <!-- ################################################################################################ -->
+    <article>
+      <div class="fl_left">
+          <h2 class="heading">Statistics for {{month}} {{year}} </h2>
+      </div>
+      <br>
+      <br>
+      <br>
+      <br>
+    </article>
+    <br><br>
+    <article>
+      <p>Earnings for {{month}} {{year}}</p>
+      <button type="button" class="collapsible">Revenue, Salary Payouts & Profits</button>
+        <div class="content" style="color:black">
+          <br>
+          <p>Revenue, Salary Payouts & Profits</p>
+          <p>Revenue: {{revenue}}</p>
+          <p>Profit for {{month}} {{year}}: {{profit}}</p>
+          <p>Salary to be Paid out for {{month}} {{year}}: {{salary}}</p>
+          <div>
+          <button type="button" class="collapsible">Salary Breakdown per Caretaker</button>
+          <div>
+            <table style="width: 100%">
+            <tr>
+              <th>UserID</th>
+              <th>Salary</th>
+            </tr>
+          {% for item in salary_table %}
+          <tr style="color:black">
+            <td>{{item.userid}}</td>
+            <td>{{item.salary2}}</td>
+          </tr>
+          {% endfor %}
+          </table>
+          </div>
+        </div>
+
+        <br>
+        </div>
+    </article>
+    <br><br>    
+    <article>
+      <p>Pets cared for in {{month}} {{year}}</p>
+      <button type="button" class="collapsible">Pets cared for in {{ month }} {{ year }}</button>
+        <div class="content" style="color:black">
+          <br>
+          <p>Pets cared for in {{ month }} {{ year }}</p>
+          <p>Total Number of Pets cared for in {{ month }} {{ year }}: {{ total_pets }}</p>
+          <div>
+          <button type="button" class="collapsible">Breakdown of Pets cared for by Pet Type</button>
+          <div>
+            <table style="width: 100%">
+            <tr>
+              <th>Pet Type</th>
+              <th>Number of Unique Pets</th>
+            </tr>
+          {% for item in bd_pet_table %}
+          <tr style="color:black">
+            <td>{{item.pet_type}}</td>
+            <td>{{item.unique_pets}}</td>
+          </tr>
+          {% endfor %}
+          </table>
+          </div>
+        </div>
+        <br>
+        </div>
+    </article>
+    <br><br>
+    <article>
+      <p>Full-Time Caretakers Performance</p>
+      <button type="button" class="collapsible">Underperforming Caretakers</button>
+        <div class="content" style="color:black">
+          <br>
+          <p>Underperforming Caretakers</p>
+          <p>Full-time Caretakers that having rating of less than or equal to 3.00 and did not hit 30 pet days in the month. </p>
+            <table style="width: 100%">
+            <tr>
+              <th>Name</th>
+              <th>UserID</th>
+              <th>Ratings</th>
+              <th>No. of Pet Days</th>
+            </tr>
+          {% for item in under_perf_table %}
+          <tr style="color:black">
+            <td>{{item.name}}</td>
+            <td>{{item.userid}}</td>
+            <td>{{item.rating}}</td>
+            <td>{{item.petdays}}</td>
+          </tr>
+          {% endfor %}
+        </table>
+        <br>
+        </div>
+    </article>
+    <br>
+    <article>
+      <button type="button" class="collapsible">Top Performing Caretakers </button>
+        <div class="content" style="color:black">
+          <br>
+          <p>Top Performing Caretakers</p>
+          <p>Full-time Caretakers that having rating of more than or equal to 4.20 and managed to hit 60 pet days in the month. </p>
+            <table style="width: 100%">
+            <tr>
+              <th>Name</th>
+              <th>UserID</th>
+              <th>Ratings</th>
+              <th>No. of Pet Days</th>
+            </tr>
+          {% for item in well_perf_table %}
+          <tr style="color:black">
+            <td>{{item.name}}</td>
+            <td>{{item.userid}}</td>
+            <td>{{item.rating}}</td>
+            <td>{{item.petdays}}</td>
+          </tr>
+          {% endfor %}
+        </table>
+        <br>
+        </div>
+        <br>
+    </article>
+    <br>
+    <article>
+      <p>Pet Owner</p>
+      <button type="button" class="collapsible">Top 10 Valuable Pet Owners</button>
+        <div class="content" style="color:black">
+          <br>
+          <p>Top 10 Valuable Pet Owners</p>
+            <table style="width: 100%">
+            <tr>
+              <th>Name</th>
+              <th>UserID</th>
+              <th>Payments</th>
+            </tr>
+          {% for item in val_PO_table %}
+          <tr style="color:black">
+            <td>{{item.name}}</td>
+            <td>{{item.userid}}</td>
+            <td>{{item.payments}}</td>
+          </tr>
+          {% endfor %}
+        </table>
+        <br>
+        </div>
+    </article>
+    <br>
+  <script>
+    var coll = document.getElementsByClassName("collapsible");
+    var j;
+    for (j = 0; j < coll.length; j++) {
+      coll[j].addEventListener("click", function() {
+        this.classList.toggle("active");
+        var content = this.nextElementSibling;
+        if (content.style.display === "block") {
+          content.style.display = "none";
+        } else {
+          content.style.display = "block";
+        }
+      });
+    }
+    </script> <!-- Don't need open -->   
+</div>
+</div>
+</body>
+</html>

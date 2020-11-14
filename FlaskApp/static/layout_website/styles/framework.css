@@ -171,7 +171,7 @@ address, article, aside, figcaption, figure, footer, header, main, nav, section{
   left: 0px;
 }
 
-.ratingControl-stars--1 {
+.ratingControl-stars--10 {
   left: 0px;
 }
 
@@ -179,7 +179,7 @@ address, article, aside, figcaption, figure, footer, header, main, nav, section{
   left: 30px;
 }
 
-.ratingControl-stars--2 {
+.ratingControl-stars--20 {
   left: 30px;
 }
 
@@ -187,7 +187,7 @@ address, article, aside, figcaption, figure, footer, header, main, nav, section{
   left: 60px;
 }
 
-.ratingControl-stars--3 {
+.ratingControl-stars--30 {
   left: 60px;
 }
 
@@ -195,7 +195,7 @@ address, article, aside, figcaption, figure, footer, header, main, nav, section{
   left: 90px;
 }
 
-.ratingControl-stars--4 {
+.ratingControl-stars--40 {
   left: 90px;
 }
 
@@ -203,7 +203,7 @@ address, article, aside, figcaption, figure, footer, header, main, nav, section{
   left: 120px;
 }
 
-.ratingControl-stars--5 {
+.ratingControl-stars--50 {
   left: 120px;
 }
 

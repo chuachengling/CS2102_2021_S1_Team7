@@ -7,8 +7,6 @@ CREATE OR REPLACE FUNCTION admin_modify_base(pettype VARCHAR, price FLOAT4)
 RETURNS VOID AS
 $func$
 BEGIN
-  UPDATE Pet_Type
-  SET price = admin_modify_base.price
   WHERE pet_type = admin_modify_base.pettype;
 END;
 $func$
@@ -397,7 +395,7 @@ RETURNS VOID AS
 $func$
 BEGIN
   UPDATE Pet p
-  SET dead = max(pa.dead) + 1
+  SET dead = (SELECT max(pa.dead) + 1 FROM Pet pa WHERE pa.pet_name = petname)
   WHERE p.po_userid = pouserid AND p.pet_name = petname;
 END;
 $func$
@@ -453,11 +451,11 @@ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION po_upcoming_bookings(userid VARCHAR)
-RETURNS TABLE (pet_name VARCHAR, ct_userid VARCHAR, start_date DATE, end_date DATE, status VARCHAR,dead INTEGER) AS
+RETURNS TABLE (pet_name VARCHAR, name VARCHAR, ct_userid VARCHAR, start_date DATE, end_date DATE, status VARCHAR,dead INTEGER) AS
 $func$
 BEGIN
   RETURN QUERY(
- SELECT b.pet_name,c.name,b.start_date,b.end_date,b.status,b.dead FROM(
+ SELECT b.pet_name,c.name,b.ct_userid,b.start_date,b.end_date,b.status,b.dead FROM(
   SELECT a.pet_name, a.ct_userid, a.start_date, a.end_date, a.status, a.dead FROM Looking_After a
  WHERE a.po_userid = po_upcoming_bookings.userid AND a.status != 'Rejected' AND a.status != 'Completed') AS b
   INNER JOIN 
@@ -525,8 +523,6 @@ END;
 $func$
 LANGUAGE plpgsql;
 
-
-
 CREATE OR REPLACE FUNCTION bidDetails (ctuserid VARCHAR, pouserid VARCHAR, petname VARCHAR) 
 RETURNS TABLE (name VARCHAR, avgrating FLOAT4, price FLOAT4) AS
 $func$
@@ -551,13 +547,13 @@ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION pastTransactions (userid VARCHAR)
-RETURNS TABLE (po_name VARCHAR, ct_name VARCHAR, pet_name VARCHAR, dead INTEGER, start_date DATE, end_date DATE) AS
+RETURNS TABLE (po_name VARCHAR, ct_name VARCHAR,ct_userid VARCHAR, pet_name VARCHAR, dead INTEGER, start_date DATE, end_date DATE) AS
 $func$
 BEGIN
 RETURN QUERY(
- SELECT (SELECT u.name FROM Users u WHERE u.userid = la.po_userid) AS po_name, (SELECT u.name FROM Users u WHERE u.userid = la.ct_userid) AS ct_name, la.pet_name, la.dead, la.start_date, la.end_date
+ SELECT (SELECT u.name FROM Users u WHERE u.userid = la.po_userid) AS po_name, (SELECT u.name FROM Users u WHERE u.userid = la.ct_userid) AS ct_name, la.ct_userid,la.pet_name, la.dead, la.start_date, la.end_date
  FROM Looking_After la
- WHERE (la.po_userid = pastTransactions.userid OR la.ct_userid = pastTransactions.userid) AND la.status = 'Completed');
+ WHERE (la.po_userid = pastTransactions.userid OR la.ct_userid = pastTransactions.userid) AND la.status = 'Completed' AND la.review IS NULL);
 END;
 $func$
 LANGUAGE plpgsql;
@@ -627,6 +623,18 @@ END;
 $func$
 LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION find_valid(query_userid VARCHAR, pettype VARCHAR)
+RETURNS BOOLEAN AS
+$func$
+BEGIN
+  IF (SELECT ct.full_time FROM Caretaker ct WHERE ct.ct_userid = query_userid) THEN
+    RETURN (SELECT EXISTS(SELECT * FROM FT_validpet ftvp WHERE ftvp.ct_userid = query_userid AND ftvp.pet_type = pettype));
+  ELSE
+    RETURN (SELECT EXISTS(SELECT * FROM PT_validpet ptvp WHERE ptvp.ct_userid = query_userid AND ptvp.pet_type = pettype));
+  END IF;
+END;
+$func$
+LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION find_card(userid VARCHAR)
@@ -700,7 +708,7 @@ LANGUAGE plpgsql;
 
 -- Page 10
 CREATE OR REPLACE FUNCTION ct_reviews(userid VARCHAR)
-RETURNS TABLE (ct_userid VARCHAR, po_userid VARCHAR, pet_name VARCHAR, start_date DATE, end_date DATE, status VARCHAR, rating FLOAT4, review VARCHAR) AS
+RETURNS TABLE (ct_userid VARCHAR, po_userid VARCHAR, pet_name VARCHAR, start_date DATE, end_date DATE, status VARCHAR, rating FLOAT8, review VARCHAR) AS
 $func$
 BEGIN
 RETURN QUERY(
@@ -729,11 +737,11 @@ LANGUAGE plpgsql;
 
 -- Page 12
 CREATE OR REPLACE FUNCTION ftpt_upcoming(userid VARCHAR)
-RETURNS TABLE (petname VARCHAR, name VARCHAR,  start_date DATE, end_date DATE) AS
+RETURNS TABLE (petname VARCHAR, name VARCHAR,po_userid VARCHAR,  start_date DATE, end_date DATE) AS
 $func$
 BEGIN
 RETURN QUERY(
-  SELECT b.pet_name, c.name, b.start_date, b.end_date FROM 
+  SELECT b.pet_name, c.name,b.po_userid, b.start_date, b.end_date FROM 
   (SELECT la.pet_name, la.po_userid,  la.start_date, la.end_date FROM Looking_After la
   WHERE la.ct_userid = ftpt_upcoming.userid AND la.status = 'Accepted') AS b
   INNER JOIN
@@ -746,11 +754,11 @@ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION ftpt_pending(userid VARCHAR)
-RETURNS TABLE (petname VARCHAR, name VARCHAR,  start_date DATE, end_date DATE) AS
+RETURNS TABLE (petname VARCHAR, name VARCHAR,po_userid VARCHAR,  start_date DATE, end_date DATE) AS
 $func$
 BEGIN
 RETURN QUERY(
-  SELECT b.pet_name, c.name, b.start_date, b.end_date FROM 
+  SELECT b.pet_name, c.name,b.po_userid, b.start_date, b.end_date FROM 
   (SELECT la.pet_name, la.po_userid,  la.start_date, la.end_date FROM Looking_After la
   WHERE la.ct_userid = ftpt_pending.userid AND la.status = 'Pending') AS b
   INNER JOIN

@@ -10,10 +10,10 @@ Licence URI: https://www.os-templates.com/template-terms
 <html lang="">
 <!-- To declare your language - read more here: https://www.w3.org/International/questions/qa-html-language-declarations -->
 <head>
-<title>Pet Stealer</title>
+<title>Confirm Booking</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link href="static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
+<link href="../../../../../static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
 </head>
 <body id="top">
 <!-- ################################################################################################ -->
@@ -22,10 +22,11 @@ Licence URI: https://www.os-templates.com/template-terms
 <div class="wrapper row0">
   <div id="topbar" class="hoc clear"> 
     <!-- ################################################################################################ -->
+    <a class="btn" href="/logout">Logout</a>
     <div class="fl_right">
       <ul class="nospace">
-        <li><i class="fas fa-phone rgtspace-5"></i> +65 XXXX XXXX</li>
-        <li><i class="fas fa-envelope rgtspace-5"></i> XXXX@domain.com</li>
+        <li><i class="fas fa-phone rgtspace-5"></i> +65 6566 6656</li>
+        <li><i class="fas fa-envelope rgtspace-5"></i> info@petswecare.com</li>
       </ul>
     </div>
     <!-- ################################################################################################ -->
@@ -38,19 +39,18 @@ Licence URI: https://www.os-templates.com/template-terms
   <header id="header" class="hoc clear"> 
     <!-- ################################################################################################ -->
     <div id="logo" class="one_quarter first">
-      <h1><a href="12_FT_home.html">Care Taker</a></h1> <!-- depends if CO and CT overlap -->
+      <h1><a href={{panel.panel_ct}}>Care Taker</a></h1> <!-- depends if CO and CT overlap -->
     </div>
-    
     <div id="logo" class="one_quarter">
-      <h1><a href="5_PO_home.html">Pet Owner</a></h1>
+      <h1><a href={{panel.panel_po}}>Pet Owner</a></h1>
     </div>
       
     <div id="logo" class="one_quarter">
-      <h1><a href="4_settings_profile.html">Profile</a></h1>
+      <h1><a href={{panel.profile}}>Profile</a></h1>
     </div>
     
     <div id="logo" class="one_quarter">
-      <h1><a href="9_all_transactions.html">All Transactions</a></h1>
+      <h1><a href={{panel.all_transact}}>All Transactions</a></h1>
     </div>
     <!-- ################################################################################################ -->
   </header>
@@ -58,7 +58,7 @@ Licence URI: https://www.os-templates.com/template-terms
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
-<div class="wrapper bgded overlay" style="background-image:url('static/images_website/bgg.png');">
+<div class="wrapper bgded overlay" style="background-image:url('../../../../../static/images_website/bgg.png');">
   <div id="pageintro" class="hoc clear"> 
     <!-- ################################################################################################ -->
     <article>
@@ -76,7 +76,7 @@ Licence URI: https://www.os-templates.com/template-terms
       <div class="fl_left">
         <p>Summary of Details:</p>
         <p style="color: #white">STATUS:
-        <span style="color: #00FD49">ACCEPTED</span>
+        <span style="color: #00FD49">{{status}}</span>
         </p>
         
         <p>Pet Owner Name: {{name}} </p>
@@ -85,23 +85,24 @@ Licence URI: https://www.os-templates.com/template-terms
         <p>Pet Name: {{petname}} </p>
         <p>Pet Type: {{pet_type}} </p>
 
-        <p>Special Request: XXXXXXXXXX </p> 
+        <p>Special Request: {{spec_req}} </p> 
         <br> 
-        <p>Care Taker Name: Chua Cheng Ling</p>
-        <p>Care Taker Phone Number: XXXX XXXX </p>
-        <p>Start Date: XX/XX/XX </p>
-        <p>End Date: XX/XX/XX </p>
-        <p>Price: XX days * $20 = $XX </p> 
-        <p>Payment Method: XXX </p> 
+        <p>Care Taker Name: {{ctname}}</p>
+        <p>Care Taker Phone Number: {{ctnum}}</p>
+        <p>Start Date: {{start_date}}</p>
+        <p>End Date: {{end_date}}</p>
+        <p>Price: {{duration}} days * ${{rate}} = ${{total}} </p> 
+        <p>Payment Method: {{payment_op}} </p> 
       </div>
       <div class="fl_right">
-        <p>Chat</p>
-        <p>insert chat bubbles</p>
-        <p>...</p>
-        <p>...</p>
-        <p>...</p>
-        <textarea rows="5" cols="50" style="color: grey">Message</textarea>
-        <a class="btn" type="submit" href="#">SEND!</a> 
+        <textarea rows="20" cols="50" style="color: grey" readonly>{{chat_text}}</textarea>
+        <form action='#' method='post'>
+                        {{ form.csrf_token }}
+        {{ form.text_field(rows = '5', cols='50', style='color:black') }}
+        <!-- <textarea rows="5" cols="50" style="color: grey">Message</textarea> -->
+        <!-- <a class="btn" type="submit" href="#">SEND!</a>  -->
+        {{ form.submit_field (class_="btn")}}
+        </form>
       </div>
     </article>
   </div>

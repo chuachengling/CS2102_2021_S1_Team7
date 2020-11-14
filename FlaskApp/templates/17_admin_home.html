@@ -10,10 +10,10 @@ Licence URI: https://www.os-templates.com/template-terms
 <html lang="">
 <!-- To declare your language - read more here: https://www.w3.org/International/questions/qa-html-language-declarations -->
 <head>
-<title>Pet Stealer</title>
+<title>Admin Homepage</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link href="static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
+<link href="../static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
 </head>
 <body id="top">
 <!-- ################################################################################################ -->
@@ -22,10 +22,11 @@ Licence URI: https://www.os-templates.com/template-terms
 <div class="wrapper row0">
   <div id="topbar" class="hoc clear"> 
     <!-- ################################################################################################ -->
+    <a class="btn" href="/logout">Logout</a>
     <div class="fl_right">
       <ul class="nospace">
-        <li><i class="fas fa-phone rgtspace-5"></i> +65 XXXX XXXX</li>
-        <li><i class="fas fa-envelope rgtspace-5"></i> XXXX@domain.com</li>
+        <li><i class="fas fa-phone rgtspace-5"></i> +65 6566 6656</li>
+        <li><i class="fas fa-envelope rgtspace-5"></i> info@petswecare.com</li>
       </ul>
     </div>
     <!-- ################################################################################################ -->
@@ -38,19 +39,18 @@ Licence URI: https://www.os-templates.com/template-terms
   <header id="header" class="hoc clear"> 
     <!-- ################################################################################################ -->
     <div id="logo" class="one_quarter first">
-      <h1><a href="12_FT_home.html">Care Taker</a></h1> <!-- depends if CO and CT overlap -->
+      <h1><a href={{panel.panel_ct}}>Care Taker</a></h1> <!-- depends if CO and CT overlap -->
     </div>
-    
     <div id="logo" class="one_quarter">
-      <h1><a href="5_PO_home.html">Pet Owner</a></h1>
+      <h1><a href={{panel.panel_po}}>Pet Owner</a></h1>
     </div>
       
     <div id="logo" class="one_quarter">
-      <h1><a href="4_settings_profile.html">Profile</a></h1>
+      <h1><a href={{panel.profile}}>Profile</a></h1>
     </div>
     
     <div id="logo" class="one_quarter">
-      <h1><a href="9_all_transactions.html">All Transactions</a></h1>
+      <h1><a href={{panel.all_transact}}>All Transactions</a></h1>
     </div>
     <!-- ################################################################################################ -->
   </header>
@@ -58,33 +58,91 @@ Licence URI: https://www.os-templates.com/template-terms
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
-<div class="wrapper bgded overlay" style="background-image:url('static/images_website/bgg.png');">
+<div class="wrapper bgded overlay" style="background-image:url('../static/images_website/bgg.png');">
   <div id="pageintro" class="hoc clear"> 
     <!-- ################################################################################################ -->
     <article>
       <div class="fl_left">
-          <h2 class="heading">Hello!</h2>
-        </div>
-      <div class="fl_right"> 
-          <a href="18_addFT.html" class="btn">Add New Full-timer</a>
+        <h2 class="heading">Hello!</h2>
+      </div>
+      <div class="fl_right">
+        <a class="btn" href="/admin/addft">Add New Full-Timer</a>
+      <br>
       </div>
       <br>
-      <br>
-      <br>
-      <br>
-      <br>
-      <h2 class="heading">Admin Search for</h2>
+    </article>
+    <article>
+      <button type="button" class="collapsible">Modify Base Price</button>
+        <div class="content" style="color:black">
+          <br>
+          <p>Modify Base Price</p>
+          <form action='#' method='post'>
+              {{ mod_form.csrf_token}}
+              Cat ({{Cat}})
+              {{ mod_form.cat_rate }}
+              Dog ({{Dog}})
+              {{ mod_form.dog_rate }}
+              Rabbit ({{Rabbit}})
+              {{ mod_form.rabbit_rate }}
+              Guinea pig ({{Guinea_pig}})
+              {{ mod_form.guinea_rate }}
+              Hamster ({{Hamster}})
+              {{ mod_form.hamster_rate }}
+              Gerbil ({{Gerbil}})
+              {{ mod_form.gerbil_rate }}
+              Mouse ({{Mouse}})
+              {{ mod_form.mouse_rate }}
+              Chinchilla ({{Chinchilla}})
+              {{ mod_form.chinchilla_rate }}
+              <div class="fl_right">
+                <footer>{{ mod_form.submit_field (class_="btn") }}</footer>  
+                <br> 
+              </div>
+            </form>
+          <!-- <p>Cat: 
+            <span><textarea rows="1" cols="20" style="color: grey">Insert Pet Rate</textarea></span>
+          </p>
+          <p>Dog: 
+            <span><textarea rows="1" cols="20" style="color: grey">Insert Pet Rate</textarea></span>
+          </p>
+          <p>Rabbit: 
+            <span><textarea rows="1" cols="20" style="color: grey">Insert Pet Rate</textarea></span>
+          </p>
+          <p>Guinea Pig: 
+            <span><textarea rows="1" cols="20" style="color: grey">Insert Pet Rate</textarea></span>
+          </p>
+          <p>Hamster: 
+            <span><textarea rows="1" cols="20" style="color: grey">Insert Pet Rate</textarea></span>
+          </p>
+          <p>Gerbil: 
+            <span><textarea rows="1" cols="20" style="color: grey">Insert Pet Rate</textarea></span>
+          </p>
+          <p>Mouse: 
+            <span><textarea rows="1" cols="20" style="color: grey">Insert Pet Rate</textarea></span>
+          </p>
+          <p>Chinchilla: 
+            <span><textarea rows="1" cols="20" style="color: grey">Insert Pet Rate</textarea></span>
+          </p> -->
+          <!-- <div class="fl_right">
+            <footer><a class="btn" href="#">Confirm</a></footer>  
+            <br> 
+          </div> -->
+        </div> 
+    </article> 
+    <br><br>
       <div class="one_quarter first">
-        <p>Caretaker</p>
-        <textarea rows="1" cols="25" style="color: grey">Username (CT)</textarea>
-      </div>
-      <div class="one_quarter">
-        <p>Pet Owner</p>
-        <textarea rows="1" cols="25" style="color: grey">Username (PO)</textarea>
-      </div>
-      
-      <div class="one_quarter">
-        <p>Month</p>
+       <form action="#" method="post" style="color:black">
+          {{ stats_search.csrf_token }}
+          {{ stats_search.month_field.label }}
+          {{ stats_search.month_field }}
+          {{ stats_search.year_field.label }}
+          {{ stats_search.year_field }}
+          <div class="fl_right">
+            <footer>{{ stats_search.submit_field (class_="btn") }}</footer>  
+            <br> 
+          </div>
+       </form> 
+        <!-- <p>Month</p>
           <select name="Months" style="color: grey" >
               <option value="jan" style="color:grey">January</option> 
               <option value="feb" style="color:grey">February</option>
@@ -103,14 +161,28 @@ Licence URI: https://www.os-templates.com/template-terms
       <div class="one_quarter">
         <p>Year</p>
         <textarea rows="1" cols="10" style="color: grey">Year</textarea>
-      </div>
-
+      </div> -->
+      
       <br>
       <br>
-      <div class="fl_right"> 
+      <!-- <div class="fl_right"> 
           <footer><a href="#" class="btn">SEARCH</a></footer>
-      </div>
-    </article>
+      </div> -->
+    <script>
+    var coll = document.getElementsByClassName("collapsible");
+    var j;
+    for (j = 0; j < coll.length; j++) {
+      coll[j].addEventListener("click", function() {
+        this.classList.toggle("active");
+        var content = this.nextElementSibling;
+        if (content.style.display === "block") {
+          content.style.display = "none";
+        } else {
+          content.style.display = "block";
+        }
+      });
+    }
+    </script> <!-- Don't need open -->     
 </div>
 </div>
 </body>

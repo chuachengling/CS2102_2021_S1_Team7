@@ -10,10 +10,10 @@ Licence URI: https://www.os-templates.com/template-terms
 <html lang="">
 <!-- To declare your language - read more here: https://www.w3.org/International/questions/qa-html-language-declarations -->
 <head>
-<title>Pet Stealer</title>
+<title>Review Caretaker</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link href="static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
+<link href="../../../../../../static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
 </head>
 <body id="top">
 <!-- ################################################################################################ -->
@@ -22,10 +22,11 @@ Licence URI: https://www.os-templates.com/template-terms
 <div class="wrapper row0">
   <div id="topbar" class="hoc clear"> 
     <!-- ################################################################################################ -->
+    <a class="btn" href="/logout">Logout</a>
     <div class="fl_right">
       <ul class="nospace">
-        <li><i class="fas fa-phone rgtspace-5"></i> +65 XXXX XXXX</li>
-        <li><i class="fas fa-envelope rgtspace-5"></i> XXXX@domain.com</li>
+        <li><i class="fas fa-phone rgtspace-5"></i> +65 6566 6656</li>
+        <li><i class="fas fa-envelope rgtspace-5"></i> info@petswecare.com</li>
       </ul>
     </div>
     <!-- ################################################################################################ -->
@@ -38,19 +39,18 @@ Licence URI: https://www.os-templates.com/template-terms
   <header id="header" class="hoc clear"> 
     <!-- ################################################################################################ -->
     <div id="logo" class="one_quarter first">
-      <h1><a href="12_FT_home.html">Care Taker</a></h1> <!-- depends if CO and CT overlap -->
+      <h1><a href={{panel.panel_ct}}>Care Taker</a></h1> <!-- depends if CO and CT overlap -->
     </div>
-    
     <div id="logo" class="one_quarter">
-      <h1><a href="5_PO_home.html">Pet Owner</a></h1>
+      <h1><a href={{panel.panel_po}}>Pet Owner</a></h1>
     </div>
       
     <div id="logo" class="one_quarter">
-      <h1><a href="4_settings_profile.html">Profile</a></h1>
+      <h1><a href={{panel.profile}}>Profile</a></h1>
     </div>
     
     <div id="logo" class="one_quarter">
-      <h1><a href="9_all_transactions.html">All Transactions</a></h1>
+      <h1><a href={{panel.all_transact}}>All Transactions</a></h1>
     </div>
     <!-- ################################################################################################ -->
   </header>
@@ -58,7 +58,7 @@ Licence URI: https://www.os-templates.com/template-terms
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
-<div class="wrapper bgded overlay" style="background-image:url('static/images_website/bgg.png');">
+<div class="wrapper bgded overlay" style="background-image:url('../../../../../../static/images_website/bgg.png');">
   <div id="pageintro" class="hoc clear"> 
     <!-- ################################################################################################ -->
     <article>
@@ -75,55 +75,49 @@ Licence URI: https://www.os-templates.com/template-terms
         <span style="color: #00FD49">COMPLETED</span>
         </p>
         
-        <p>Pet Owner Name: Nikole </p>
-        <p>Pet Owner Phone Number: XXXX XXXX </p>
+        <p>Pet Owner Name: {{name}} </p>
+        <p>Pet Owner Phone Number: {{hp}} </p>
         <br>         
-        <p>Pet Name: XXXXX </p>
-        <p>Pet Type: XXXXX </p>
-        <p>Special Request: XXXXXXXXXX </p> 
+        <p>Pet Name: {{petname}} </p>
+        <p>Pet Type: {{pet_type}} </p>
+        <p>Special Request: {{spec_req}} </p> 
         <br> 
-        <p>Care Taker Name: Chua Cheng Ling</p>
-        <p>Care Taker Phone Number: XXXX XXXX </p>
-        <p>Start Date: XX/XX/XX </p>
-        <p>End Date: XX/XX/XX </p>
-        <p>Price: XX days * $20 = $XX </p> 
-        <p>Payment Method: XXX </p> 
+        <p>Care Taker Name: {{ctname}}</p>
+        <p>Care Taker Phone Number: {{ctnum}}</p>
+        <p>Start Date: {{start_date}}</p>
+        <p>End Date: {{end_date}}</p>
+        <p>Price: {{duration}} days * ${{rate}} = ${{total}} </p> 
+        <p>Payment Method: {{payment_op}} </p>
         <br>
   
 
         <p>Ratings</p> 
-          <div class="demo">
+        <form action="#" method="post" style="color:black">
+              {{form.csrf_token}}
+
             <div class="ratingControl">
-              <input type="radio" id="rating-5" name="rating" value="5">
-              <label class="ratingControl-stars ratingControl-stars--5" for="rating-5">5</label>
-              <input type="radio" id="rating-45" name="rating" value="4.5">
-              <label class="ratingControl-stars ratingControl-stars--45 ratingControl-stars--half" for="rating-45">45</label>
-              <input type="radio" id="rating-4" name="rating" value="4">
-              <label class="ratingControl-stars ratingControl-stars--4" for="rating-4">4</label>
-              <input type="radio" id="rating-35" name="rating" value="3.5">
-              <label class="ratingControl-stars ratingControl-stars--35 ratingControl-stars--half" for="rating-35">35</label>
-              <input type="radio" id="rating-3" name="rating" value="3">
-              <label class="ratingControl-stars ratingControl-stars--3" for="rating-3">3</label>
-              <input type="radio" id="rating-25" name="rating" value="2.5">
-              <label class="ratingControl-stars ratingControl-stars--25 ratingControl-stars--half" for="rating-25">25</label>
-              <input type="radio" id="rating-2" name="rating" value="2">
-              <label class="ratingControl-stars ratingControl-stars--2" for="rating-2">2</label>
-              <input type="radio" id="rating-15" name="rating" value="1.5">
-              <label class="ratingControl-stars ratingControl-stars--15 ratingControl-stars--half" for="rating-15">15</label>
-              <input type="radio" id="rating-1" name="rating" value="1">
-              <label class="ratingControl-stars ratingControl-stars--1" for="rating-1">1</label>
-              <input type="radio" id="rating-05" name="rating" value="0.5">
-              <label class="ratingControl-stars ratingControl-stars--05 ratingControl-stars--half" for="rating-05">05</label>
+              {% for subfield in form.stars %}
+              
+              {{subfield}}
+              {% if loop.index is divisibleby 2 %}
+              {{subfield.label (class_=("ratingControl-stars ratingControl-stars--" + subfield.data + " ratingControl-stars--half"))}}    
+              {% else %}
+              {{subfield.label (class_=("ratingControl-stars ratingControl-stars--" + subfield.data))}}   
+              {% endif %}
+              {% endfor %}
             </div>
-          </div>
+
           
-        
         <p>Reviews</p>
-        <textarea rows="5" cols="40" style="color: grey">Write your reviews here!</textarea>
+        {{form.review (rows='4', cols='50', style="color:black")}}
+        <!--<textarea rows="5" cols="40" style="color: grey">Write your reviews here!</textarea>-->
         <div class="container">
-          <a class="btn" href="5_PO_home.html">Submit</a>       
+          {{form.submit (class_="btn")}}
+        <!-- <a class="btn" href="5_PO_home.html">Submit</a>  -->     
         </div>
+        </form>
       </div>
+      
     </article>
   </div>
 </div>

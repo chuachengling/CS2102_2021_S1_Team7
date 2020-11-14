@@ -10,10 +10,10 @@ Licence URI: https://www.os-templates.com/template-terms
 <html lang="">
 <!-- To declare your language - read more here: https://www.w3.org/International/questions/qa-html-language-declarations -->
 <head>
-<title>Pet Stealer</title>
+<title>Settings</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link href="static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
+<link href="../static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
 </head>
 <body id="top">
 <!-- ################################################################################################ -->
@@ -22,10 +22,11 @@ Licence URI: https://www.os-templates.com/template-terms
 <div class="wrapper row0">
   <div id="topbar" class="hoc clear"> 
     <!-- ################################################################################################ -->
+    <a class="btn" href="/logout">Logout</a>
     <div class="fl_right">
       <ul class="nospace">
-        <li><i class="fas fa-phone rgtspace-5"></i> +65 XXXX XXXX</li>
-        <li><i class="fas fa-envelope rgtspace-5"></i> XXXX@domain.com</li>
+        <li><i class="fas fa-phone rgtspace-5"></i> +65 6566 6656</li>
+        <li><i class="fas fa-envelope rgtspace-5"></i> info@petswecare.com</li>
       </ul>
     </div>
     <!-- ################################################################################################ -->
@@ -38,19 +39,18 @@ Licence URI: https://www.os-templates.com/template-terms
   <header id="header" class="hoc clear"> 
     <!-- ################################################################################################ -->
     <div id="logo" class="one_quarter first">
-      <h1><a href="12_FT_home.html">Care Taker</a></h1> <!-- depends if CO and CT overlap -->
+      <h1><a href={{panel.panel_ct}}>Care Taker</a></h1> <!-- depends if CO and CT overlap -->
     </div>
-    
     <div id="logo" class="one_quarter">
-      <h1><a href="5_PO_home.html">Pet Owner</a></h1>
+      <h1><a href={{panel.panel_po}}>Pet Owner</a></h1>
     </div>
       
     <div id="logo" class="one_quarter">
-      <h1><a href="4_settings_profile.html">Profile</a></h1>
+      <h1><a href={{panel.profile}}>Profile</a></h1>
     </div>
     
     <div id="logo" class="one_quarter">
-      <h1><a href="9_all_transactions.html">All Transactions</a></h1>
+      <h1><a href={{panel.all_transact}}>All Transactions</a></h1>
     </div>
     <!-- ################################################################################################ -->
   </header>
@@ -58,15 +58,15 @@ Licence URI: https://www.os-templates.com/template-terms
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
-<div class="wrapper bgded overlay" style="background-image:url('static/images_website/bgg.png');">
+<div class="wrapper bgded overlay" style="background-image:url('../static/images_website/bgg.png');">
   <div id="pageintro" class="hoc clear"> 
     <!-- ################################################################################################ -->
     <article>
       <div class="fl_left">
-        <h2 class="heading">Profile of USER</h2>
+        <h2 class="heading">Profile of {{name}}</h2>
       </div>
       <div class="fl_right">
-        <a class="btn" href="#">DEACTIVATE ACCOUNT</a>
+        <a class="btn" href="/deleteacc">DEACTIVATE ACCOUNT</a>
       </div>
     </article>
     <br>
@@ -75,7 +75,20 @@ Licence URI: https://www.os-templates.com/template-terms
         <div class="content" style="color:black">
           <br>
           <p>Personal Profile</p>
-          <p>Update Handphone Number: 
+          <form action='#' method='post'>
+            {{ personal_form.csrf_token}}
+            {{ personal_form.handphone_field.label }}
+            {{ personal_form.handphone_field }}
+            {{ personal_form.address_field.label }}
+            {{ personal_form.address_field }}
+            {{ personal_form.password_field.label }}
+            {{ personal_form.password_field }}
+            <div class="fl_right">
+              <footer>{{ personal_form.submit_field (class_="btn") }}</footer>  
+              <br> 
+            </div>
+          </form>
+          <p><!-- date Handphone Number: 
             <span><textarea rows="1" cols="20" style="color: grey">Enter new number here</textarea></span>
           </p>
           <p>Update Address: 
@@ -83,46 +96,117 @@ Licence URI: https://www.os-templates.com/template-terms
           </p>
           <p>Change Password: 
             <span><textarea rows="1" cols="20" style="color: grey">Enter new password here</textarea></span>
-          </p>
-          <form action="/action_page.php">
-            <label for="cars">Pets I can care for:</label>
-            <select name="cars" id="cars" multiple>
-              <option value="Cat">Cat</option>
-              <option value="Dog">Dog</option>
-              <option value="Rabbit">Rabbit</option>
-              <option value="Snake">Snake</option>
-            </select>
-          </form>
-          <div class="fl_right">
-            <footer><a class="btn" href="#">Update</a></footer>  
-            <br> 
-          </div>
+          </p> -->
         </div>
     </article>
+        {% if is_po %}
     <br><br><br><br>
     <article>
       <button type="button" class="collapsible">Pet</button>
         <div class="content" style="color:black">
           <br>
           <p>Pet Profile</p>
-          <p>This is a test</p>
-          <p>This is a test</p>
-          <p>This is a test</p>
-          <p>This is a test</p>
+            <table style="width: 100%">
+            <tr>
+              <th>Pet Name</th>
+              <th>Pet Type</th>
+              <th>Date of Birth</th>
+              <th>Special Request</th>
+              <th>Remove</th>
+            </tr>
+          {% for item in table %}
+          <tr style="color:black">
+            <td>{{item.pn}}</td>
+            <td>{{item.p_type}}</td>
+            <td>{{item.dob}}</td>
+            <td>{{item.special_req}}</td>
+            <td><a class="btn" href="{{item.href}}">Remove</a></td>
+          </tr>
+          {% endfor %}
+        </table>
+        <div>
+          <button type="button" class="collapsible">Add Pet</button>
+          <div>
+            <br>
+            <p> Add a New Pet</p>
+            <form action='#' method='post'>
+              {{ add_pet_form.csrf_token}}
+              {{ add_pet_form.petname_field.label }}
+              {{ add_pet_form.petname_field }}
+              {{ add_pet_form.pettype_field.label }}
+              {{ add_pet_form.pettype_field }}
+              {{ add_pet_form.dob_field.label }}
+              {{ add_pet_form.dob_field }}
+              {{ add_pet_form.special_field.label }}
+              {{ add_pet_form.special_field }}
+              <div class="fl_right">
+                <footer>{{ add_pet_form.submit_field (class_="btn") }}</footer>  
+                <br> 
+              </div>
+            </form>
+            <br>
+          </div>
+          <br>
+        </div>        
         </div>
     </article>
+        {% endif %}
+    
     <br><br><br><br>  
     <article>
       <button type="button" class="collapsible">Finances</button>
         <div class="content" style="color:black">
+          <form action='#' method='post'>
+          {{ finance_form.csrf_token}}
+
+
           <br>
-          <p>This is a test</p>
-          <p>This is a test</p>
-          <p>This is a test</p>
-          <p>This is a test</p>
-          <p>This is a test</p>
-        </div> 
-    </article>    
+          <p>Finance</p>
+          {% if is_ptct or is_ftct %}
+          {{ finance_form.bank_field.label }}
+          {{ finance_form.bank_field }}
+          {% endif %}
+          {% if is_po %}
+          {{ finance_form.credit_field.label }}
+          {{ finance_form.credit_field }}
+          {% endif %}
+          <div>
+            <br>
+            {% if is_ptct or is_ftct %}
+          <button type="button" class="collapsible">Add Rates</button>
+          <div>
+            <br>
+            <p>Price Rate</p>
+            <p>A positive number next to each pet class represents the price you are charging per day. A '0' represents that you are not looking to take care of that pet class. To indicate interest to take care of a particular pet type, fill in the blank with your desired daily price. To stop taking care of a particular pet class, input a '0'.</p>
+          Cat ({{Cat}})
+          {{ finance_form.cat_rate }}
+          Dog ({{Dog}})
+          {{ finance_form.dog_rate }}
+          Rabbit ({{Rabbit}})
+          {{ finance_form.rabbit_rate }}
+          Guinea pig ({{Guinea_pig}})
+          {{ finance_form.guinea_rate }}
+          Hamster ({{Hamster}})
+          {{ finance_form.hamster_rate }}
+          Gerbil ({{Gerbil}})
+          {{ finance_form.gerbil_rate }}
+          Mouse ({{Mouse}})
+          {{ finance_form.mouse_rate }}
+          Chinchilla ({{Chinchilla}})
+          {{ finance_form.chinchilla_rate }}
+          </div>
+          {% endif %}
+          <div class="fl_right">
+            <footer>{{ finance_form.submit_field (class_="btn") }}</footer>  
+            <br> 
+            <br>
+          </div>
+          <br>
+        </div>
+        </form> 
+        </div>
+    </article>   
+    
     <script>
     var coll = document.getElementsByClassName("collapsible");
     var j;

@@ -10,10 +10,10 @@ Licence URI: https://www.os-templates.com/template-terms
 <html lang="">
 <!-- To declare your language - read more here: https://www.w3.org/International/questions/qa-html-language-declarations -->
 <head>
-<title>Pet Stealer</title>
+<title>Salary Breakdown</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link href="static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
+<link href="../../../../../../static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
 </head>
 <body id="top">
 <!-- ################################################################################################ -->
@@ -22,10 +22,11 @@ Licence URI: https://www.os-templates.com/template-terms
 <div class="wrapper row0">
   <div id="topbar" class="hoc clear"> 
     <!-- ################################################################################################ -->
+    <a class="btn" href="/logout">Logout</a>
     <div class="fl_right">
       <ul class="nospace">
-        <li><i class="fas fa-phone rgtspace-5"></i> +65 XXXX XXXX</li>
-        <li><i class="fas fa-envelope rgtspace-5"></i> XXXX@domain.com</li>
+        <li><i class="fas fa-phone rgtspace-5"></i> +65 6566 6656</li>
+        <li><i class="fas fa-envelope rgtspace-5"></i> info@petswecare.com</li>
       </ul>
     </div>
     <!-- ################################################################################################ -->
@@ -38,19 +39,18 @@ Licence URI: https://www.os-templates.com/template-terms
   <header id="header" class="hoc clear"> 
     <!-- ################################################################################################ -->
     <div id="logo" class="one_quarter first">
-      <h1><a href="12_FT_home.html">Care Taker</a></h1> <!-- depends if CO and CT overlap -->
+      <h1><a href={{panel.panel_ct}}>Care Taker</a></h1> <!-- depends if CO and CT overlap -->
     </div>
-    
     <div id="logo" class="one_quarter">
-      <h1><a href="5_PO_home.html">Pet Owner</a></h1>
+      <h1><a href={{panel.panel_po}}>Pet Owner</a></h1>
     </div>
       
     <div id="logo" class="one_quarter">
-      <h1><a href="4_settings_profile.html">Profile</a></h1>
+      <h1><a href={{panel.profile}}>Profile</a></h1>
     </div>
     
     <div id="logo" class="one_quarter">
-      <h1><a href="9_all_transactions.html">All Transactions</a></h1>
+      <h1><a href={{panel.all_transact}}>All Transactions</a></h1>
     </div>
     <!-- ################################################################################################ -->
   </header>
@@ -58,15 +58,15 @@ Licence URI: https://www.os-templates.com/template-terms
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
 <!-- ################################################################################################ -->
-<div class="wrapper bgded overlay" style="background-image:url('static/images_website/bgg.png');">s
+<div class="wrapper bgded overlay" style="background-image:url('../../../../../../static/images_website/bgg.png');">
   <div id="pageintro" class="hoc clear"> 
     <!-- ################################################################################################ -->
     <article>
       <h2 class="heading">Salary Breakdown</h2>
       <br>
-      <p>Month of: _JAN 2020_</p>
-      <p>Base: XXX </p>
-      <p>Total Pet Days (A): xxxxxxxxx </p>
+      <p>Month/Year: {{ month }} {{ year }}</p>
+      <p>Base: $3000 </p>
+      <p>Total Pet Days (A): {{ pet_days }} </p>
       <p>All Transactions for the Month: </p>
         <table style="width: 100%">
         <tr>
@@ -77,14 +77,24 @@ Licence URI: https://www.os-templates.com/template-terms
             <th>Rate</th>
             <th>Transaction Amount</th>
         </tr>
+        {% for item in table %}
+          <tr style="color:black">
+            <td>{{item.po_name}}</td>
+            <td>{{item.pet_name}}</td>
+            <td>{{item.start_date}}</td>
+            <td>{{item.end_date}}</td>
+            <td>{{item.rate}}</td>
+            <td>{{item.trans_amt}}</td>
+          </tr>
+          {% endfor %}
         </table>
-      <p>Total Transaction Amount for the Month:</p>
-      <p>Average Transaction Amount for the Month/Pet Day (B):</p>
-      <p>Extra Bonus: B * (A - 60) * 80% = </p>
-      <p>Total Salary for the Month: Base + Extra Bonus = </p>
+      <p>Total Transaction Amount for the Month: {{total_amt_for_mnth}} </p>
+      <p>Average Transaction Amount for the Month/Pet Day (B): {{avg_trans_amt}} </p>
+      <p>Extra Bonus: B * (A - 60) * 80% = {{ bonus }}</p>
+      <p>Total Salary for the Month: Base + Extra Bonus = {{ total_salary }}</p>
       <br>
       <br>
-      <a class="btn" href="14_salary.html">Back to Previous Page</a>
+      <a class="btn" href="/check_salary">Back to Previous Page</a>
     </article>
 </div>
 </div>
