@@ -10,7 +10,7 @@ Licence URI: https://www.os-templates.com/template-terms
 <html lang="">
 <!-- To declare your language - read more here: https://www.w3.org/International/questions/qa-html-language-declarations -->
 <head>
-<title>Pet Stealer</title>
+<title>Full Time Homepage</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link href="../static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
@@ -22,6 +22,7 @@ Licence URI: https://www.os-templates.com/template-terms
 <div class="wrapper row0">
   <div id="topbar" class="hoc clear"> 
     <!-- ################################################################################################ -->
+    <a class="btn" href="/logout">Logout</a>
     <div class="fl_right">
       <ul class="nospace">
         <li><i class="fas fa-phone rgtspace-5"></i> +65 6566 6656</li>
@@ -65,7 +66,7 @@ Licence URI: https://www.os-templates.com/template-terms
         <h2 class="heading">Hi {{name}}, </h2>
       </div>
       <div class="fl_right">
-        <a class="btn" href="13_FT_leave.html">Apply Leave</a>
+        <a class="btn" href="/ft_leave_apply">Apply Leave</a>
         <a class="btn" href="/check_salary">Check Salary</a>
       </div>
     </article>
@@ -98,10 +99,10 @@ Licence URI: https://www.os-templates.com/template-terms
         {% for item in upcoming_jobs %}
           <tr style="color:black">
             <td>{{item.pet_name}}</td>
-            <td>{{item.userid}}</td>
+            <td>{{item.name}}</td>
             <td>{{item.start_date}}</td>
             <td>{{item.end_date}}</td>
-            <td></td>
+            <td><a class="btn" href={{item.hrefstring}}>VIEW</a></td>
           </tr>
           {% endfor %}
         </table>

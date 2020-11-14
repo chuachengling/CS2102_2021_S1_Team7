@@ -198,7 +198,7 @@ class AddPT_avail(FlaskForm):
     def validate_enddate_field(form, field):
         if field.data < form.avail_startdate_field.data:
             raise ValidationError("End date must not be earlier than start date.") 
-    submit_field = SubmitField("Apply leave")
+    submit_field = SubmitField("Declare Availability")
 
 
 class MessageForm(FlaskForm):

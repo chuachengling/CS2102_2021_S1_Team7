@@ -10,7 +10,7 @@ Licence URI: https://www.os-templates.com/template-terms
 <html lang="">
 <!-- To declare your language - read more here: https://www.w3.org/International/questions/qa-html-language-declarations -->
 <head>
-<title>Pet Stealer</title>
+<title>Salary Breakdown</title>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <link href="../../../../../../static/layout_website/styles/layout.css" rel="stylesheet" type="text/css" media="all">
@@ -22,6 +22,7 @@ Licence URI: https://www.os-templates.com/template-terms
 <div class="wrapper row0">
   <div id="topbar" class="hoc clear"> 
     <!-- ################################################################################################ -->
+    <a class="btn" href="/logout">Logout</a>
     <div class="fl_right">
       <ul class="nospace">
         <li><i class="fas fa-phone rgtspace-5"></i> +65 6566 6656</li>
@@ -87,13 +88,13 @@ Licence URI: https://www.os-templates.com/template-terms
           </tr>
           {% endfor %}
         </table>
-      <p>Total Transaction Amount for the Month: {{total_amt_for_mth}} </p>
+      <p>Total Transaction Amount for the Month: {{total_amt_for_mnth}} </p>
       <p>Average Transaction Amount for the Month/Pet Day (B): {{avg_trans_amt}} </p>
       <p>Extra Bonus: B * (A - 60) * 80% = {{ bonus }}</p>
       <p>Total Salary for the Month: Base + Extra Bonus = {{ total_salary }}</p>
       <br>
       <br>
-      <a class="btn" href="14_salary.html">Back to Previous Page</a>
+      <a class="btn" href="/check_salary">Back to Previous Page</a>
     </article>
 </div>
 </div>

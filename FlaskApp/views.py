@@ -14,7 +14,13 @@ view = Blueprint("view", __name__)
 
 def panel_filler(user_role,userid):
     panel = {'panel_ct':'','panel_po':'','profile':'/settings','all_transact':'/transactions'}
-    if 'po' in user_role:
+    if 'po' in user_role and 'ptct' in user_role:
+        panel['panel_po'] = '/po_home'
+        panel['panel_ct'] = '/pt_home'
+    elif 'po' in user_role and 'ftct' in user_role:
+        panel['panel_po'] = '/po_home'
+        panel['panel_ct'] = '/ft_home'
+    elif 'po' in user_role:
         panel['panel_po'] = panel['panel_ct'] + '/po_home'
     elif 'ptct' in user_role:
         panel['panel_ct'] = panel['panel_ct'] +'/pt_home'
@@ -137,12 +143,8 @@ def render_login_page():
     userid = form.userid.data
     entered_password = form.password.data
     if form.validate_on_submit():
-        exists_user = db.session.execute(func.login(userid,entered_password)).fetchall()  
+        exists_user = db.session.execute(func.login(userid,entered_password)).fetchone()[0]  
         if exists_user:
-            ## Checks if password is correct 
-            login_pass ="SELECT a.password FROM Accounts a WHERE userid = '{}' AND password = '{}'".format(userid,entered_password)  ### Supposed to use function but currently function does not work. 
-            login_password = db.session.execute(login_pass).fetchall()    
-            
             ##Updates Session
             session['userid'] = userid
             user_role = get_user_role(userid)
@@ -557,7 +559,7 @@ def render_po_booking(pn,ct,sd,ed,d):
         panel = panel
     ) ## TODO pet profile link
 
-##Page  8b Caretaker Confirm Booking Page
+##Page  8b Caretaker Confirmed Booking Page
 @view.route("/ct_booking/<pn>/<po>/<sd>/<ed>/<d>", methods = ["GET","POST"])
 def render_ct_booking(pn,po,sd,ed,d):
 
@@ -624,7 +626,6 @@ def render_transactions_page():
     userid = session['userid']
     all_transac = db.session.query(func.all_your_transac(userid)).all()
     # (ct_userid 0, po_userid 1, pet_name 2, dead 3, start_date 4, end_date 5, status 6, rating 7)
-    #ct_userid 0, po_userid 1, pet_name 2, start_date 3, end_date 4, status 5, rating 6, dead 7
     table = list()
     for row in all_transac:
         new = list(csv.reader([row[0][1:-1]]))[0]
@@ -639,8 +640,8 @@ def render_transactions_page():
             href = '/ct_booking/' + '/'.join((new[2], new[1], new[4], new[5], new[3]))
         new[0] = db.session.query(func.find_name(new[0])).all()[0][0] # ct_name
         new[1] = db.session.query(func.find_name(new[1])).all()[0][0] # po_name
-        new[7] = href
-        table.append(dict(zip(('ct_name','po_name', 'pet_name', 'start_date', 'end_date', 'status', 'rating', 'hrefstring'), new))) # completed and not reviewed -> review booking ELSE view booking
+        new.append(href)
+        table.append(dict(zip(('ct_name','po_name', 'pet_name', 'dead','start_date', 'end_date', 'status', 'rating', 'hrefstring'), new))) # completed and not reviewed -> review booking ELSE view booking
     return render_template("/9_all_transactions.html", table = table,panel = panel)
 
 
@@ -715,9 +716,6 @@ def render_ft_home():
     userid = session['userid']
     panel = session['panel']
     name = db.session.query(func.find_name(userid)).all()[0][0] 
-    #userid = session['userid']
-    # userid = 'deverton82' ## change this later
-    # if 'user_role' not in session:
     user_role = get_user_role(userid)
     session['user_role'] = user_role
     user_role = session['user_role']
@@ -726,15 +724,14 @@ def render_ft_home():
     elif 'ftct' not in user_role:
         return redirect('/po_home')
 
-    ## need to create logic if 
-    ## person is not caretaker 
-    ## person is not PT caretaker
-    ## person does not have any upcoming and pending jobs
-    ## person does not have either one job
     data_upcoming = db.session.query(func.ftpt_upcoming(userid)).all()
     upcoming_jobs = []
     for row in data_upcoming:
-        upcoming_jobs.append(dict(zip(('pet_name', 'userid', 'start_date', 'end_date'), row[0][1:-1].split(","))))
+        new = row[0][1:-1].split(",")
+        href = '/ct_booking/' + '/'.join([new[0]] + new[2:] ) + '/' + '0'
+        #"/ct_booking/<pn>/<po>/<sd>/<ed>/<d>"
+        new.append(href)
+        upcoming_jobs.append(dict(zip(('pet_name','name','po_userid', 'start_date', 'end_date','hrefstring'), new)))
     
     return render_template("/12_FT_home.html", name = name,
         upcoming_jobs = upcoming_jobs,
@@ -758,10 +755,17 @@ def render_pt_home():
     upcoming_jobs = []
     pending_jobs = []
     for row in data_upcoming:
-        upcoming_jobs.append(dict(zip(('pet_name', 'userid', 'start_date', 'end_date'), row[0][1:-1].split(","))))
+        new = row[0][1:-1].split(",")
+        href = '/ct_booking/' + '/'.join([new[0]] + new[2:] ) + '/' + '0'
+        #"/ct_booking/<pn>/<po>/<sd>/<ed>/<d>"
+        new.append(href)
+        upcoming_jobs.append(dict(zip(('pet_name','name','po_userid', 'start_date', 'end_date','hrefstring'), new)))
     
     for row in data_pending:
-        pending_jobs.append(dict(zip(('pet_name', 'userid', 'start_date', 'end_date'), row[0][1:-1].split(","))))
+        new = row[0][1:-1].split(",")
+        href = '/ct_booking/' + '/'.join([new[0]] + new[2:] ) + '/' + '0'
+        new.append(href)
+        pending_jobs.append(dict(zip(('pet_name', 'name','po_userid', 'start_date', 'end_date','hrefstring'), new)))
 
 
     return render_template("/12_PT_home.html", name = name,
@@ -875,26 +879,28 @@ def render_FTsalary_breakdown(month, year):
     month = int(month)
     _MONTH_LOOKUP = {1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June',
         7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November', 12: 'December'}
-    month  = _MONTH_LOOKUP[month]
     year = int(year)
     pet_days = db.session.query(func.total_pet_day_mnth(userid, year, month)).all()[0][0]
     total_amt_for_mnth = db.session.query(func.total_trans_pr_mnth(userid, year, month)).all()[0][0]
     trans_this_mth = db.session.query(func.trans_this_month(userid, year, month)).all()
+    month  = _MONTH_LOOKUP[month]
     table = list()
     for row in trans_this_mth:
         new = list(csv.reader([row[0][1:-1]]))[0]
         new[0] = db.session.query(func.find_name(new[0])).all()[0][0]
+        new[-1] = '{:.02f}'.format(float(new[-1]))
+        new[-2] = '{:.02f}'.format(float(new[-2]))
         table.append(dict(zip(('po_name', 'pet_name', 'start_date', 'end_date','rate','trans_amt'), new)))
     avg_trans_amt = total_amt_for_mnth/pet_days
-    bonus = (pet_days - 60)*0.8
+    bonus = max((pet_days - 60)*0.8, 0)
     total_salary = bonus + 3000
     return render_template("/15_FT_salary_breakdown.html", month = month, 
                                                             year = year, 
                                                             pet_days = pet_days, 
-                                                            total_amt_for_mnth = total_amt_for_mnth, 
-                                                            avg_trans_amt = avg_trans_amt, 
-                                                            bonus = bonus, 
-                                                            total_salary = total_salary, 
+                                                            total_amt_for_mnth = '${:.2f}'.format(total_amt_for_mnth), 
+                                                            avg_trans_amt = '${:.2f}'.format(avg_trans_amt), 
+                                                            bonus = '${:.2f}'.format(bonus, 0), 
+                                                            total_salary = '${:.2f}'.format(total_salary), 
                                                             table = table,
                                                             panel = panel)
 
@@ -910,20 +916,23 @@ def render_PTsalary_breakdown(month, year):
     month = int(month)
     _MONTH_LOOKUP = {1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May', 6: 'June',
         7: 'July', 8: 'August', 9: 'September', 10: 'October', 11: 'November', 12: 'December'}
-    month = _MONTH_LOOKUP[month]
+    
     year = int(year)
     trans_this_mth = db.session.query(func.trans_this_month(userid, year, month)).all()
     table = list()
     for row in trans_this_mth:
         new = list(csv.reader([row[0][1:-1]]))[0]
         new[0] = db.session.query(func.find_name(new[0])).all()[0][0]
+        new[-1] = '{:.02f}'.format(float(new[-1]))
+        new[-2] = '{:.02f}'.format(float(new[-2]))
         table.append(dict(zip(('po_name', 'pet_name', 'start_date', 'end_date','rate','trans_amt'), new)))
     total_amt_for_mnth = db.session.query(func.total_trans_pr_mnth(userid, year, month)).all()[0][0]
     total_salary = total_amt_for_mnth*0.75
+    month = _MONTH_LOOKUP[month]
     return render_template("/15_PT_salary_breakdown.html", month = month, 
                                                             year = year, 
-                                                            total_amt_for_mnth = total_amt_for_mnth, 
-                                                            total_salary = total_salary, 
+                                                            total_amt_for_mnth = '${:.2f}'.format(total_amt_for_mnth), 
+                                                            total_salary = '${:.2f}'.format(total_salary), 
                                                             table = table,
                                                             panel = panel)
 
@@ -955,23 +964,37 @@ def render_admin_home():
     mod_form = Admin_modify_price()
     stats_search = Admin_stat_search()
 
+
     if 'cat_rate' in request.form: # checking the form
         pairs = [('Cat', mod_form.cat_rate), ('Dog', mod_form.dog_rate), ('Rabbit', mod_form.rabbit_rate), ('Guinea pig', mod_form.guinea_rate),
                 ('Hamster', mod_form.hamster_rate), ('Gerbil', mod_form.gerbil_rate), ('Mouse', mod_form.mouse_rate), ('Chinchilla', mod_form.chinchilla_rate)]
         for animal, field in pairs:
             if field.data:
                 try:
-                    db.session.execute(func.admin_modify_base(animal, float(field.data)))
-                    db.session.commit()
+                    price = float(field.data)
+                    if price > 0:                        
+                        db.session.execute(func.admin_modify_base(animal, price))
+                        db.session.commit()
                 except:
                     pass
-    elif 'month_field' in request.form: # checking the form
+
+    animals = ['Cat', 'Dog','Rabbit','Guinea pig','Hamster','Gerbil','Mouse','Chinchilla']
+    existingPrices = []
+    
+    for animal in animals:
+        query = "SELECT price FROM pet_type WHERE pet_type = '{}'".format(animal)
+        price = db.session.execute(query).fetchone()[0]
+        #price = '${:.02f}'.format(db.session.execute(func.find_rate(userid, animal)).fetchone()[0])
+        existingPrices.append(price)
+
+    if 'month_field' in request.form: # checking the form
         mth = str(stats_search.month_field.data)
         yr = stats_search.year_field.data
         return redirect('/admin_stats/' + mth + '/' + yr)
     return render_template("17_admin_home.html", mod_form = mod_form, 
                                                     stats_search = stats_search,
-                                                    panel = panel)
+                                                    panel = panel,
+                                                    **dict(zip((i.replace(' ','_') for i in animals), existingPrices)))
 
 ## Page 17b Admin Statistics
 
@@ -1088,7 +1111,7 @@ def render_addFT():
             if roles:
                 roles += '/'
             roles += 'ftct'
-        return redirect("/admin_home.html")
+        return redirect("/admin_home")
     return render_template("18_addFT.html", form=form,
                                             panel = panel)
 
@@ -1098,7 +1121,7 @@ def render_addFT():
 @view.route('/logout')
 def render_logout_page():
     session.pop('userid',None)
-    return redirect('/')
+    return redirect('/login')
 
 ## Additional pages to note
 @view.route("/privileged-page", methods=["GET"])

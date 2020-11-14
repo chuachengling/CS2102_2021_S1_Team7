@@ -389,7 +389,7 @@ RETURNS VOID AS
 $func$
 BEGIN
   UPDATE Pet p
-  SET dead = max(pa.dead) + 1
+  SET dead = (SELECT max(pa.dead) + 1 FROM Pet pa WHERE pa.pet_name = petname)
   WHERE p.po_userid = pouserid AND p.pet_name = petname;
 END;
 $func$
@@ -691,7 +691,7 @@ CREATE OR REPLACE FUNCTION what_trans_pr(ct_userid VARCHAR, po_userid VARCHAR, p
 RETURNS FLOAT4 AS
 $func$
 BEGIN
-  RETURN((sd-ed+1)*find_rate(what_trans_pr.ct_userid, find_pettype(what_trans_pr.po_userid, what_trans_pr.pet_name, what_trans_pr.dead)));
+  RETURN((ed-sd+1)*find_rate(what_trans_pr.ct_userid, find_pettype(what_trans_pr.po_userid, what_trans_pr.pet_name, what_trans_pr.dead)));
 END;
 $func$
 LANGUAGE plpgsql;
@@ -764,11 +764,11 @@ LANGUAGE plpgsql;
 
 -- Page 12
 CREATE OR REPLACE FUNCTION ftpt_upcoming(userid VARCHAR)
-RETURNS TABLE (petname VARCHAR, name VARCHAR,  start_date DATE, end_date DATE) AS
+RETURNS TABLE (petname VARCHAR, name VARCHAR,po_userid VARCHAR,  start_date DATE, end_date DATE) AS
 $func$
 BEGIN
 RETURN QUERY(
-  SELECT b.pet_name, c.name, b.start_date, b.end_date FROM 
+  SELECT b.pet_name, c.name,b.po_userid, b.start_date, b.end_date FROM 
   (SELECT la.pet_name, la.po_userid,  la.start_date, la.end_date FROM Looking_After la
   WHERE la.ct_userid = ftpt_upcoming.userid AND la.status = 'Accepted') AS b
   INNER JOIN
@@ -781,11 +781,11 @@ LANGUAGE plpgsql;
 
 
 CREATE OR REPLACE FUNCTION ftpt_pending(userid VARCHAR)
-RETURNS TABLE (petname VARCHAR, name VARCHAR,  start_date DATE, end_date DATE) AS
+RETURNS TABLE (petname VARCHAR, name VARCHAR,po_userid VARCHAR,  start_date DATE, end_date DATE) AS
 $func$
 BEGIN
 RETURN QUERY(
-  SELECT b.pet_name, c.name, b.start_date, b.end_date FROM 
+  SELECT b.pet_name, c.name,b.po_userid, b.start_date, b.end_date FROM 
   (SELECT la.pet_name, la.po_userid,  la.start_date, la.end_date FROM Looking_After la
   WHERE la.ct_userid = ftpt_pending.userid AND la.status = 'Pending') AS b
   INNER JOIN
